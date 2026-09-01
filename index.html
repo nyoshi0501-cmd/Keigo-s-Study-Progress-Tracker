@@ -3,12 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>景悟のやること表 | 学習進捗ボード</title>
+  <title>景悟のやること表 | 学習進捗・スケジュール管理</title>
   
   <!-- QRコード生成ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- リアルタイム通信ライブラリ（無料・登録不要で端末間を即座に連動） -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
   <style>
     :root {
@@ -18,12 +16,13 @@
       --primary-border: #bcd5f5;
       --bg-gradient: linear-gradient(135deg, #f0f7ff 0%, #e8f2fe 100%);
       --card-bg: #ffffff;
-      --lane-bg: rgba(248, 251, 255, 0.92);
+      --lane-bg: rgba(248, 251, 255, 0.94);
       --text-main: #183247;
       --text-sub: #5c768d;
       --border-color: #d8e5f2;
       --danger: #ef4444;
       --danger-dark: #dc2626;
+      --holiday-color: #e11d48;
       
       /* 科目別カラー */
       --tag-math: #2563eb;
@@ -47,6 +46,7 @@
       display: flex;
       flex-direction: column;
       padding: 16px;
+      gap: 14px;
     }
 
     #confetti-canvas {
@@ -59,7 +59,6 @@
       z-index: 9999;
     }
 
-    /* 通知トースト */
     #toast {
       position: fixed;
       bottom: 24px;
@@ -82,14 +81,12 @@
       transform: translateY(0);
     }
 
-    /* ヘッダー */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 12px;
       padding: 14px 20px;
       background: #ffffff;
       border-radius: 14px;
@@ -118,14 +115,20 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: #ecfdf5;
-      color: #065f46;
       padding: 3px 10px;
       border-radius: 20px;
       font-weight: 600;
       font-size: 0.78rem;
+    }
+    .sync-status.online {
+      background: #ecfdf5;
+      color: #065f46;
       border: 1px solid #a7f3d0;
-      transition: all 0.3s ease;
+    }
+    .sync-status.local {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
     }
 
     .status-dot {
@@ -135,13 +138,7 @@
       background: #10b981;
       animation: pulse 2s infinite;
     }
-
-    .sync-status.offline {
-      background: #f1f5f9;
-      color: #475569;
-      border-color: #cbd5e1;
-    }
-    .sync-status.offline .status-dot {
+    .sync-status.local .status-dot {
       background: #94a3b8;
       animation: none;
     }
@@ -173,91 +170,36 @@
       user-select: none;
     }
 
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
 
     .btn-sync {
       background: linear-gradient(135deg, #0284c7, #0369a1);
       color: white;
       box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
     }
-    .btn-sync:hover {
-      background: #075985;
-    }
+    .btn-sync:hover { background: #075985; }
 
-    .btn-print {
-      background: #0ea5e9;
+    .btn-print { background: #0ea5e9; color: white; }
+    .btn-print:hover { background: #0284c7; }
+
+    .btn-settings { background: #f8fafc; color: #334155; border-color: #cbd5e1; }
+    .btn-settings:hover { background: #e2e8f0; }
+
+    .btn-event {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
       color: white;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
     }
-    .btn-print:hover {
-      background: #0284c7;
-    }
+    .btn-event:hover { background: #6d28d9; }
 
-    .btn-settings {
-      background: #f8fafc;
-      color: #334155;
-      border-color: #cbd5e1;
-    }
-    .btn-settings:hover {
-      background: #e2e8f0;
-    }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: var(--danger-dark); }
 
-    .btn-danger {
-      background: var(--danger);
-      color: white;
-    }
-    .btn-danger:hover {
-      background: var(--danger-dark);
-    }
-
-    /* 進捗バー */
-    .progress-section {
-      background: #ffffff;
-      padding: 12px 18px;
-      border-radius: 12px;
-      margin-bottom: 12px;
-      box-shadow: 0 2px 8px rgba(0, 112, 210, 0.05);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .progress-info {
-      font-size: 0.9rem;
-      font-weight: bold;
-      color: var(--primary-dark);
-    }
-
-    .progress-bar-wrapper {
-      flex: 1;
-      min-width: 180px;
-      height: 10px;
-      background: #e2effa;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #0070d2, #10b981);
-      width: 0%;
-      border-radius: 6px;
-      transition: width 0.4s ease;
-    }
-
-    /* タスク入力フォーム */
     .form-container {
       background: #ffffff;
       padding: 16px 20px;
       border-radius: 12px;
-      margin-bottom: 14px;
       box-shadow: 0 4px 16px rgba(0, 112, 210, 0.06);
       display: flex;
       flex-direction: column;
@@ -266,11 +208,17 @@
 
     .form-button-selectors {
       display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .selector-row {
+      display: flex;
       flex-wrap: wrap;
       gap: 16px;
       align-items: center;
-      border-bottom: 1px dashed var(--border-color);
-      padding-bottom: 12px;
     }
 
     .selector-group {
@@ -293,6 +241,7 @@
       padding: 3px;
       border-radius: 8px;
       gap: 3px;
+      flex-wrap: wrap;
     }
 
     .choice-btn {
@@ -308,9 +257,7 @@
       user-select: none;
     }
 
-    .choice-btn:hover {
-      color: #0f172a;
-    }
+    .choice-btn:hover { color: #0f172a; }
 
     .choice-btn.active {
       background: #ffffff;
@@ -319,16 +266,70 @@
       font-weight: 700;
     }
 
-    /* 教科ボタンのアクティブ色 */
     .choice-btn.active[data-val="算数"] { color: var(--tag-math); }
     .choice-btn.active[data-val="国語"] { color: var(--tag-japanese); }
     .choice-btn.active[data-val="理科"] { color: var(--tag-science); }
     .choice-btn.active[data-val="社会"] { color: var(--tag-social); }
     .choice-btn.active[data-val="その他"] { color: var(--tag-other); }
 
-    .choice-btn.active[data-val="宿題"] { color: #0284c7; }
-    .choice-btn.active[data-val="テスト直し"] { color: #7c3aed; }
-    .choice-btn.active[data-val="通常"] { color: #475569; }
+    .math-only-btn { display: none; }
+
+    .math-round-wrapper {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .math-round-select {
+      padding: 5px 8px;
+      border-radius: 6px;
+      border: 1.5px solid #cbd5e1;
+      font-size: 0.82rem;
+      font-weight: bold;
+      color: var(--primary-dark);
+      background: #ffffff;
+      cursor: pointer;
+      outline: none;
+    }
+    .math-round-select:focus { border-color: var(--primary); }
+
+    .deadline-picker-btn {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #334155;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+    .deadline-picker-btn:hover {
+      background: #eff6ff;
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+    .deadline-picker-btn.has-value {
+      background: #eff6ff;
+      border-color: #93c5fd;
+      color: #1e40af;
+      font-weight: 700;
+    }
+
+    .btn-clear-date {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 2px 6px;
+      display: none;
+    }
+    .btn-clear-date:hover { color: var(--danger); }
+    .btn-clear-date.active { display: inline-block; }
 
     .form-inputs-row {
       display: flex;
@@ -337,7 +338,7 @@
       align-items: center;
     }
 
-    input[type="text"], input[type="password"] {
+    input[type="text"], input[type="password"], input[type="number"], textarea, select {
       padding: 10px 14px;
       border: 1.5px solid var(--border-color);
       border-radius: 8px;
@@ -347,7 +348,7 @@
       background: #ffffff;
     }
 
-    input[type="text"]:focus, input[type="password"]:focus {
+    input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus, textarea:focus, select:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(0, 112, 210, 0.15);
     }
@@ -367,13 +368,11 @@
     }
     .btn-add:hover { background: var(--primary-dark); }
 
-    /* 一括操作バー */
     .batch-actions-bar {
       background: #fef2f2;
       border: 1px solid #fecaca;
       border-radius: 10px;
       padding: 10px 16px;
-      margin-bottom: 12px;
       display: none;
       justify-content: space-between;
       align-items: center;
@@ -388,15 +387,13 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* カンバンボード */
     .kanban-board {
       display: grid;
       grid-template-columns: repeat(5, minmax(210px, 1fr));
       gap: 14px;
-      flex: 1;
       align-items: flex-start;
       overflow-x: auto;
-      padding-bottom: 20px;
+      padding-bottom: 8px;
     }
 
     .lane {
@@ -406,7 +403,7 @@
       border: 1px solid var(--primary-border);
       display: flex;
       flex-direction: column;
-      min-height: 480px;
+      min-height: 420px;
       box-shadow: 0 4px 12px rgba(0, 70, 150, 0.03);
     }
 
@@ -472,7 +469,6 @@
       outline: 2px dashed var(--primary);
     }
 
-    /* カード */
     .card {
       background: var(--card-bg);
       border-radius: 8px;
@@ -480,13 +476,20 @@
       box-shadow: 0 2px 6px rgba(0, 40, 100, 0.06);
       border: 1px solid rgba(216, 229, 242, 0.9);
       cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.15s;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
       position: relative;
     }
 
     .card:hover {
       box-shadow: 0 6px 16px rgba(0, 112, 210, 0.18);
       transform: translateY(-2px);
+    }
+
+    /* 期限切れタスクの強調（赤い枠線と警告色） */
+    .card.is-overdue {
+      border: 2px solid var(--danger) !important;
+      background: #fff8f8 !important;
+      box-shadow: 0 3px 10px rgba(239, 68, 68, 0.15) !important;
     }
 
     .card.dragging {
@@ -537,38 +540,50 @@
       border-radius: 4px;
       border: 1px solid transparent;
     }
-    .sub-tag-宿題 {
-      background: #e0f2fe;
-      color: #0369a1;
-      border-color: #bae6fd;
-    }
-    .sub-tag-テスト直し {
-      background: #f3e8ff;
-      color: #6b21a8;
-      border-color: #e9d5ff;
-    }
-    .sub-tag-通常 {
-      background: #f1f5f9;
-      color: #475569;
-      border-color: #e2e8f0;
-    }
+    .sub-tag-宿題 { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+    .sub-tag-テスト直し { background: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
+    .sub-tag-通常 { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+    .sub-tag-計算 { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; font-weight: 700; }
+    .sub-tag-総問1 { background: #ecfeff; color: #0e7490; border-color: #a5f3fc; font-weight: 700; }
+    .sub-tag-総問2 { background: #fdf4ff; color: #a21caf; border-color: #f5d0fe; font-weight: 700; }
 
     .round-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 19px;
-      height: 19px;
-      background: #1e293b;
+      min-width: 28px;
+      height: 20px;
+      padding: 0 6px;
+      background: #0f172a;
       color: #ffffff;
       font-size: 0.72rem;
       font-weight: 800;
-      border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+      letter-spacing: 0.02em;
+      white-space: nowrap;
     }
-    .round-badge.round-1 { background: #0284c7; }
-    .round-badge.round-2 { background: #ea580c; }
-    .round-badge.round-3 { background: #e11d48; }
+
+    .card-deadline-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #1e40af;
+      background: #dbeafe;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #bfdbfe;
+    }
+    .card-deadline-badge.overdue {
+      background: #fee2e2;
+      color: #991b1b;
+      border-color: #fca5a5;
+      font-weight: 800;
+    }
+    .card-deadline-badge.today {
+      background: #fef3c7;
+      color: #92400e;
+      border-color: #fde68a;
+    }
 
     .btn-delete {
       background: none;
@@ -589,7 +604,7 @@
       font-size: 0.9rem;
       font-weight: 600;
       line-height: 1.4;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       word-break: break-word;
     }
 
@@ -599,7 +614,7 @@
       background: #f8fafc;
       padding: 4px 8px;
       border-radius: 4px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       border-left: 3px solid #cbd5e1;
     }
 
@@ -626,7 +641,263 @@
       color: white;
     }
 
-    /* モーダル共通スタイル */
+    .schedule-section {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 16px rgba(0, 112, 210, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .schedule-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .schedule-legend {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .month-calendar-block {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .month-heading {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #334155;
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+
+    .cal-day-cell {
+      min-height: 100px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .cal-day-cell:hover {
+      border-color: #93c5fd;
+      box-shadow: 0 2px 8px rgba(0, 112, 210, 0.08);
+    }
+    .cal-day-cell.is-today {
+      border: 2px solid var(--primary);
+      background: #f0f7ff;
+    }
+    .cal-day-cell.is-past {
+      background: #fafafa;
+    }
+
+    .day-cell-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 0.78rem;
+      margin-bottom: 2px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 3px;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .day-number {
+      font-weight: 700;
+      color: #334155;
+    }
+    .day-number.sun { color: #e11d48; }
+    .day-number.sat { color: #0284c7; }
+    .day-number.holiday { color: var(--holiday-color); font-weight: 800; }
+
+    .holiday-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--holiday-color);
+      background: #ffe4e6;
+      padding: 1px 4px;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .cal-day-cell.is-today .day-number {
+      background: var(--primary);
+      color: white;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+    .day-cell-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #64748b;
+    }
+
+    .day-tasks-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .cal-task-item {
+      font-size: 0.7rem;
+      padding: 4px 6px;
+      border-radius: 5px;
+      background: #f8fafc;
+      border-left: 3px solid #64748b;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .cal-task-item:hover {
+      transform: translateX(2px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .cal-task-item.tag-border-算数 { border-left-color: var(--tag-math); background: #eff6ff; }
+    .cal-task-item.tag-border-国語 { border-left-color: var(--tag-japanese); background: #fff1f2; }
+    .cal-task-item.tag-border-理科 { border-left-color: var(--tag-science); background: #f0fdf4; }
+    .cal-task-item.tag-border-社会 { border-left-color: var(--tag-social); background: #fff7ed; }
+    .cal-task-item.tag-border-その他 { border-left-color: var(--tag-other); background: #f8fafc; }
+
+    .cal-task-item.completed {
+      opacity: 0.6;
+      text-decoration: line-through;
+      background: #f1f5f9 !important;
+      border-left-color: #94a3b8 !important;
+    }
+
+    .cal-task-header-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 700;
+      font-size: 0.66rem;
+    }
+
+    .cal-task-text {
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .day-events-list {
+      margin-top: 4px;
+      padding-top: 3px;
+      border-top: 1px dashed #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .cal-event-item {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #6b21a8;
+      background: transparent;
+      padding: 2px 3px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2px;
+      cursor: default;
+      line-height: 1.25;
+      border: none;
+      transition: background 0.1s ease;
+    }
+    .cal-event-item:hover {
+      background: #f3e8ff;
+      color: #581c87;
+    }
+
+    .btn-event-delete {
+      background: none;
+      border: none;
+      font-size: 0.72rem;
+      color: #9333ea;
+      cursor: pointer;
+      padding: 1px 4px;
+      border-radius: 4px;
+      line-height: 1;
+      opacity: 0.7;
+      transition: all 0.15s ease;
+    }
+    .btn-event-delete:hover {
+      opacity: 1;
+      color: var(--danger);
+      background: #fee2e2;
+    }
+
+    .backup-drop-zone {
+      border: 2px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+      background: #f8fafc;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .backup-drop-zone.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary-dark);
+    }
+
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -641,14 +912,17 @@
       z-index: 1000;
       padding: 16px;
     }
-
     .modal-overlay.active { display: flex; }
+
+    #datePickerModal {
+      z-index: 2000;
+    }
 
     .modal {
       background: #ffffff;
       border-radius: 14px;
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
       max-height: 90vh;
       overflow-y: auto;
       padding: 22px;
@@ -698,14 +972,151 @@
       line-height: 1.6;
     }
 
-    /* カード拡大詳細モーダル専用 */
+    .picker-container {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .picker-months-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 600px) {
+      .picker-months-row { grid-template-columns: 1fr; }
+    }
+
+    .picker-month-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .picker-month-title {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--primary-dark);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .picker-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+    }
+
+    .picker-weekday {
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #64748b;
+      padding: 2px 0;
+    }
+    .picker-weekday.sun { color: #e11d48; }
+    .picker-weekday.sat { color: #0284c7; }
+
+    .picker-day-btn {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #1e293b;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.1s ease;
+      line-height: 1;
+      padding: 2px;
+    }
+    .picker-day-btn:hover:not(:disabled) {
+      background: #dbeafe;
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+    .picker-day-btn:disabled {
+      color: #cbd5e1;
+      background: #f1f5f9;
+      border-color: transparent;
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .picker-day-btn.selected {
+      background: var(--primary);
+      color: white !important;
+      border-color: var(--primary-dark);
+      font-weight: 800;
+    }
+    .picker-day-btn.today-highlight {
+      border: 2px solid var(--primary);
+    }
+    .picker-day-btn.is-holiday {
+      color: var(--holiday-color);
+      font-weight: 700;
+    }
+
+    .picker-manual-box {
+      background: #f1f5f9;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .picker-quick-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .form-row {
+      margin-bottom: 12px;
+    }
+    .form-row label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .form-row input, .form-row select, .form-row textarea { width: 100%; }
+
+    .qr-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 14px 0;
+    }
+    #qrcode {
+      padding: 12px;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+    }
+    .share-url-box {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .share-url-box input { flex: 1; font-size: 0.8rem; background: #f8fafc; }
+
     .detail-badge-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
     }
-
     .detail-tag {
       font-size: 0.85rem;
       font-weight: bold;
@@ -713,48 +1124,44 @@
       padding: 4px 10px;
       border-radius: 6px;
     }
-
     .detail-subtag {
       font-size: 0.8rem;
       font-weight: 600;
       padding: 4px 10px;
       border-radius: 6px;
     }
-
     .detail-round {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 26px;
+      min-width: 36px;
       height: 26px;
+      padding: 0 8px;
       color: white;
       font-size: 0.85rem;
       font-weight: 800;
-      border-radius: 50%;
+      border-radius: 13px;
+      background: #1e293b;
+      white-space: nowrap;
     }
 
-    .detail-card-text {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: #0f172a;
-      line-height: 1.5;
-      margin-bottom: 14px;
-      padding: 14px;
+    .detail-edit-box {
       background: #f8fafc;
       border: 1px solid var(--border-color);
       border-radius: 10px;
-      word-break: break-word;
+      padding: 14px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .detail-memo-box {
-      font-size: 0.95rem;
-      color: #334155;
-      background: #fffbeb;
-      border: 1px solid #fef3c7;
-      padding: 12px 14px;
-      border-radius: 8px;
-      margin-bottom: 16px;
-      line-height: 1.5;
+    .detail-edit-label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 4px;
+      display: block;
     }
 
     .detail-status-row {
@@ -766,77 +1173,40 @@
       border-radius: 8px;
       margin-bottom: 16px;
     }
-
     .detail-actions {
       display: flex;
       justify-content: space-between;
       gap: 8px;
       border-top: 1px solid var(--border-color);
       padding-top: 14px;
+      flex-wrap: wrap;
     }
 
-    .form-row {
-      margin-bottom: 12px;
-    }
-
-    .form-row label {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #475569;
-      margin-bottom: 4px;
-    }
-
-    .form-row input {
-      width: 100%;
-    }
-
-    .qr-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 14px 0;
-    }
-
-    #qrcode {
-      padding: 12px;
-      background: white;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-    }
-
-    .share-url-box {
-      width: 100%;
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .share-url-box input { flex: 1; font-size: 0.8rem; background: #f8fafc; }
-
-    /* 印刷用スタイル */
     .print-only { display: none; }
     @media print {
       @page {
-        size: A4 landscape;
-        margin: 8mm;
+        size: A4 portrait;
+        margin: 5mm 6mm;
       }
-      body {
+      html, body {
+        width: 100% !important;
+        height: auto !important;
         background: #ffffff !important;
         padding: 0 !important;
+        margin: 0 !important;
         color: #000000 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        font-size: 9.5px !important;
       }
-      header, .form-container, .batch-actions-bar, .btn, .btn-delete, .card-actions, .card-select-checkbox, .modal-overlay, #confetti-canvas, #toast {
+      header, .form-container, .batch-actions-bar, .btn, .btn-delete, .btn-event-delete, .card-actions, .card-select-checkbox, .modal-overlay, #confetti-canvas, #toast {
         display: none !important;
       }
-      .print-only {
-        display: block !important;
-      }
+      .print-only { display: block !important; }
       .print-header {
-        border-bottom: 2px solid #0070d2;
-        padding-bottom: 6px;
-        margin-bottom: 10px;
+        border-bottom: 1.5px solid #0070d2;
+        padding-bottom: 2px;
+        margin-bottom: 4px;
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
@@ -844,34 +1214,103 @@
       .kanban-board {
         display: grid !important;
         grid-template-columns: repeat(5, 1fr) !important;
-        gap: 6px !important;
+        gap: 4px !important;
         overflow: visible !important;
+        min-height: auto !important;
+        padding-bottom: 4px !important;
       }
       .lane {
         background: #f8fafc !important;
         border: 1px solid #94a3b8 !important;
-        min-height: 420px !important;
-        padding: 6px !important;
+        min-height: 230px !important;
+        padding: 4px !important;
         page-break-inside: avoid;
+        box-shadow: none !important;
+      }
+      .lane-header {
+        margin-bottom: 4px !important;
+        padding-bottom: 2px !important;
+      }
+      .lane-title {
+        font-size: 0.72rem !important;
+      }
+      .lane-count {
+        font-size: 0.65rem !important;
+        padding: 1px 4px !important;
+      }
+      .cards-container {
+        gap: 4px !important;
+        min-height: auto !important;
       }
       .card {
         border: 1px solid #cbd5e1 !important;
         box-shadow: none !important;
-        padding: 6px 8px !important;
+        padding: 4px 5px !important;
         page-break-inside: avoid;
         cursor: default !important;
+        margin-bottom: 0 !important;
       }
-      .card:hover {
-        transform: none !important;
+      .card.is-overdue {
+        border: 1.5px solid #ef4444 !important;
       }
-      .print-footer {
-        margin-top: 12px;
-        display: grid;
-        grid-template-columns: 1fr 140px;
-        gap: 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        padding: 8px 12px;
+      .card-top {
+        margin-bottom: 3px !important;
+      }
+      .tag, .sub-tag, .round-badge, .card-deadline-badge {
+        font-size: 0.6rem !important;
+        padding: 1px 4px !important;
+      }
+      .card-text {
+        font-size: 0.74rem !important;
+        margin-bottom: 2px !important;
+        line-height: 1.25 !important;
+      }
+      .card-memo {
+        font-size: 0.65rem !important;
+        padding: 1px 4px !important;
+        margin-bottom: 0 !important;
+      }
+      .schedule-section {
+        box-shadow: none !important;
+        padding: 4px !important;
+        border: 1px solid #cbd5e1 !important;
+        gap: 4px !important;
+        page-break-inside: avoid;
+      }
+      .schedule-header {
+        padding-bottom: 2px !important;
+      }
+      .schedule-title {
+        font-size: 0.78rem !important;
+      }
+      .schedule-legend {
+        font-size: 0.65rem !important;
+        gap: 6px !important;
+      }
+      .month-heading {
+        font-size: 0.72rem !important;
+        padding: 2px 6px !important;
+      }
+      .calendar-grid {
+        grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)) !important;
+        gap: 3px !important;
+      }
+      .cal-day-cell {
+        min-height: 48px !important;
+        padding: 3px !important;
+        gap: 2px !important;
+      }
+      .day-cell-top {
+        font-size: 0.66rem !important;
+        padding-bottom: 1px !important;
+      }
+      .cal-task-item {
+        font-size: 0.62rem !important;
+        padding: 1px 3px !important;
+      }
+      .cal-event-item {
+        font-size: 0.6rem !important;
+        padding: 1px 2px !important;
       }
     }
   </style>
@@ -881,10 +1320,10 @@
   <canvas id="confetti-canvas"></canvas>
   <div id="toast"></div>
 
-  <!-- 印刷用ヘッダー -->
+  <!-- 印刷用ヘッダー (A4縦1枚最適化) -->
   <div class="print-only print-header">
-    <div><h1 style="font-size:1.3rem; color:#005fb2;">📘 景悟のやること表（学習進捗レポート）</h1></div>
-    <div style="font-size: 0.85rem;">日付: <strong id="print-date"></strong> ｜ なまえ: _________________</div>
+    <div><h1 style="font-size:1.05rem; color:#005fb2;">📘 景悟のやること表（学習進捗・スケジュール）</h1></div>
+    <div style="font-size: 0.75rem;">日付: <strong id="print-date"></strong> ｜ なまえ: 景悟</div>
   </div>
 
   <!-- 操作ヘッダー -->
@@ -892,11 +1331,11 @@
     <div class="header-title">
       <h1>📚 景悟のやること表</h1>
       <div class="header-title-meta">
-        <span class="sync-status" id="syncStatusBadge">
+        <span class="sync-status local" id="syncStatusBadge">
           <span class="status-dot"></span>
-          <span id="syncStatusText">リアルタイム接続中...</span>
+          <span id="syncStatusText">ローカル保存モード</span>
         </span>
-        <span>進捗を右に動かしてチェック！</span>
+        <span>進捗を右に動かしてチェック！ 期限順に自動整理</span>
       </div>
     </div>
 
@@ -906,25 +1345,22 @@
         📲 家族にリンクを送る
       </button>
 
-      <!-- 印刷 -->
+      <!-- 印刷 (A4縦集約) -->
       <button class="btn btn-print" onclick="triggerPrint()">
         🖨️ 印刷
       </button>
 
-      <!-- 設定（パスワード変更・合言葉） -->
+      <!-- 設定（パスワード変更・合言葉・クラウド同期・バックアップ） -->
       <button class="btn btn-settings" onclick="openSettingsModal()" title="設定">
         ⚙️ 設定
       </button>
+
+      <!-- イベントスケジュール追加 -->
+      <button class="btn btn-event" onclick="openEventModal()" title="予定・テスト・学校行事などのイベントを追加">
+        📅 イベント追加
+      </button>
     </div>
   </header>
-
-  <!-- 進捗率 -->
-  <div class="progress-section">
-    <div class="progress-info" id="progress-info">完了率: 0%</div>
-    <div class="progress-bar-wrapper">
-      <div class="progress-bar-fill" id="progress-fill"></div>
-    </div>
-  </div>
 
   <!-- 選択削除用のアクションバー -->
   <div class="batch-actions-bar" id="batchActionBar">
@@ -940,46 +1376,72 @@
     </div>
   </div>
 
-  <!-- タスク追加フォーム（ボタン選択式UI） -->
+  <!-- タスク追加フォーム -->
   <div class="form-container">
-    <!-- 教科・種別・回数 ボタングループ -->
     <div class="form-button-selectors">
-      <!-- 教科 -->
-      <div class="selector-group">
-        <span class="selector-label">教科:</span>
-        <div class="btn-group" id="subjectGroup">
-          <button type="button" class="choice-btn active" data-val="算数" onclick="setChoice('subject', '算数')">算数</button>
-          <button type="button" class="choice-btn" data-val="国語" onclick="setChoice('subject', '国語')">国語</button>
-          <button type="button" class="choice-btn" data-val="理科" onclick="setChoice('subject', '理科')">理科</button>
-          <button type="button" class="choice-btn" data-val="社会" onclick="setChoice('subject', '社会')">社会</button>
-          <button type="button" class="choice-btn" data-val="その他" onclick="setChoice('subject', 'その他')">その他</button>
+      <!-- 1行目: 教科と種別 -->
+      <div class="selector-row">
+        <!-- 教科 -->
+        <div class="selector-group">
+          <span class="selector-label">教科:</span>
+          <div class="btn-group" id="subjectGroup">
+            <button type="button" class="choice-btn active" data-val="算数" onclick="setChoice('subject', '算数')">算数</button>
+            <button type="button" class="choice-btn" data-val="国語" onclick="setChoice('subject', '国語')">国語</button>
+            <button type="button" class="choice-btn" data-val="理科" onclick="setChoice('subject', '理科')">理科</button>
+            <button type="button" class="choice-btn" data-val="社会" onclick="setChoice('subject', '社会')">社会</button>
+            <button type="button" class="choice-btn" data-val="その他" onclick="setChoice('subject', 'その他')">その他</button>
+          </div>
+        </div>
+
+        <!-- 種別（算数選択時は「計算」「総問1」「総問2」が出現） -->
+        <div class="selector-group">
+          <span class="selector-label">種別:</span>
+          <div class="btn-group" id="typeGroup">
+            <button type="button" class="choice-btn active" data-val="宿題" onclick="setChoice('type', '宿題')">宿題</button>
+            <button type="button" class="choice-btn" data-val="テスト直し" onclick="setChoice('type', 'テスト直し')">テスト直し</button>
+            <button type="button" class="choice-btn" data-val="通常" onclick="setChoice('type', '通常')">通常</button>
+            <!-- 算数専用ボタン -->
+            <button type="button" class="choice-btn math-only-btn" data-val="計算" onclick="setChoice('type', '計算')">🧮 計算</button>
+            <button type="button" class="choice-btn math-only-btn" data-val="総問1" onclick="setChoice('type', '総問1')">📑 総問1</button>
+            <button type="button" class="choice-btn math-only-btn" data-val="総問2" onclick="setChoice('type', '総問2')">📑 総問2</button>
+          </div>
         </div>
       </div>
 
-      <!-- 種別 -->
-      <div class="selector-group">
-        <span class="selector-label">種別:</span>
-        <div class="btn-group" id="typeGroup">
-          <button type="button" class="choice-btn active" data-val="宿題" onclick="setChoice('type', '宿題')">宿題</button>
-          <button type="button" class="choice-btn" data-val="テスト直し" onclick="setChoice('type', 'テスト直し')">テスト直し</button>
-          <button type="button" class="choice-btn" data-val="通常" onclick="setChoice('type', '通常')">通常</button>
-        </div>
-      </div>
+      <!-- 2行目: 回数と期限（必須） -->
+      <div class="selector-row">
+        <!-- 回数 -->
+        <div class="selector-group">
+          <span class="selector-label">回数:</span>
+          <div class="btn-group" id="roundGroup">
+            <button type="button" class="choice-btn active" data-val="1" onclick="setChoice('round', '1')">第1回</button>
+            <button type="button" class="choice-btn" data-val="2" onclick="setChoice('round', '2')">第2回</button>
+            <button type="button" class="choice-btn" data-val="3" onclick="setChoice('round', '3')">第3回</button>
+          </div>
 
-      <!-- 回数 -->
-      <div class="selector-group">
-        <span class="selector-label">回数:</span>
-        <div class="btn-group" id="roundGroup">
-          <button type="button" class="choice-btn active" data-val="1" onclick="setChoice('round', '1')">1</button>
-          <button type="button" class="choice-btn" data-val="2" onclick="setChoice('round', '2')">2</button>
-          <button type="button" class="choice-btn" data-val="3" onclick="setChoice('round', '3')">3</button>
+          <!-- 算数用 30〜100回選択エリア -->
+          <div class="math-round-wrapper" id="mathRoundWrapper">
+            <span style="font-size:0.8rem; color:#475569; font-weight:600; margin-left:4px;">または 30〜100回:</span>
+            <select class="math-round-select" id="mathRoundSelect" onchange="onMathRoundSelectChange(this.value)">
+              <option value="">指定なし</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 期限項目（必須） -->
+        <div class="selector-group">
+          <span class="selector-label" style="color:var(--danger-dark);">期限 (必須):</span>
+          <button type="button" class="deadline-picker-btn" id="deadlinePickerBtn" onclick="openDatePickerModal()">
+            <span id="deadlineDisplay">📅 期限を選択してください</span>
+          </button>
+          <button type="button" class="btn-clear-date" id="btnClearDate" onclick="clearSelectedDate()" title="期限を解除">✕</button>
         </div>
       </div>
     </div>
 
-    <!-- 入力欄 & 追加ボタン -->
+    <!-- 入力欄 & 追加ボタン（やる内容は任意） -->
     <div class="form-inputs-row">
-      <input type="text" id="taskInput" placeholder="やる内容を入力（例: テキスト p.30〜33）" onkeydown="if(event.key==='Enter') addTask()">
+      <input type="text" id="taskInput" placeholder="やる内容（任意・未入力でも登録可能）" onkeydown="if(event.key==='Enter') addTask()">
       <input type="text" id="memoInput" placeholder="メモ・目標（任意）" onkeydown="if(event.key==='Enter') addTask()">
       <button class="btn-add" onclick="addTask()">＋ 追加</button>
     </div>
@@ -1019,7 +1481,6 @@
       <div class="cards-container" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 3)"></div>
     </div>
 
-    <!-- 5. 提出済み -->
     <div class="lane" data-status="4">
       <div class="lane-header">
         <span class="lane-title">✨ 5. 提出済み</span>
@@ -1027,138 +1488,264 @@
           <button class="btn-lane-action" onclick="toggleSelectMode()" title="完了したタスクを選択して一括削除">選択削除</button>
           <span class="lane-count" id="count-4">0</span>
         </div>
-  <!-- リアルタイム通信 & データ同期ロジック -->
-  <script>
-    const DEFAULT_PASS = '1234';
-    const PASS_KEY = 'kanban_admin_password';
-    const GAS_URL_KEY = 'kanban_gas_save_url';
-    window.currentRoomId = 'keigo-study-room';
+      </div>
+      <div class="cards-container" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 4)"></div>
+    </div>
+  </div>
 
-    let tasks = [];
-    let isSelectMode = false;
-    let selectedTaskIds = new Set();
-    let pendingAction = null;
+  <!-- 学習スケジュールカレンダー -->
+  <section class="schedule-section">
+    <div class="schedule-header">
+      <div class="schedule-title">
+        📅 学習スケジュールカレンダー <span style="font-size:0.8rem; font-weight:normal; color:var(--text-sub);">（直近1週間 〜 30日先のみ表示・祝日対応）</span>
+      </div>
+      <div class="schedule-legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--tag-math);"></span> 算数</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--tag-japanese);"></span> 国語</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--tag-science);"></span> 理科</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--tag-social);"></span> 社会</span>
+        <span class="legend-item" style="color:#6b21a8; font-weight:bold;">▫️ イベント</span>
+        <span class="legend-item" style="color:var(--holiday-color); font-weight:bold;">● 祝日</span>
+        <span class="legend-item" style="color:var(--primary); font-weight:bold;">● 本日枠</span>
+      </div>
+    </div>
 
-    // P2P リアルタイム同期管理
-    let peer = null;
-    let activeConnections = [];
-    let isBroadcasting = false;
+    <!-- 月ごとのカレンダーコンテナ -->
+    <div id="calendarMonthsContainer"></div>
+  </section>
 
-    // 現在選択されているフォームのボタングループ値
-    let selectedFormValues = {
-      subject: '算数',
-      type: '宿題',
-      round: '1'
-    };
+  <!-- モーダル1: カード詳細＆編集モーダル -->
+  <div class="modal-overlay" id="cardDetailModal" onclick="closeModalOnOverlay(event, 'cardDetailModal')">
+    <div class="modal" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2>✏️ やることの詳細・編集</h2>
+        <button class="btn-close-modal" onclick="closeModal('cardDetailModal')">✕</button>
+      </div>
+      <div class="modal-body" id="cardDetailContent"></div>
+    </div>
+  </div>
 
-    const STATUS_NAMES = [
-      '⏳ 1. 未だ',
-      '✏️ 2. している最中',
-      '🎯 3. 終わり',
-      '👀 4. お母さんチェック中',
-      '✨ 5. 提出済み'
-    ];
-
-    window.onload = () => {
-      // URLハッシュから合言葉を取得
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const roomParam = hashParams.get('room');
-      if (roomParam) {
-        window.currentRoomId = roomParam;
-      } else {
-        const savedRoom = localStorage.getItem('kanban_last_room_id');
-        if (savedRoom) window.currentRoomId = savedRoom;
-      }
-
-      loadLocalTasks();
-      updatePrintDate();
-      initPeerSync();
-    };
-
-    /* ----------------------------------------------------
-       P2P リアルタイム同期 (PeerJS)
-    ---------------------------------------------------- */
-    function initPeerSync() {
-      const statusBadge = document.getElementById('syncStatusBadge');
-      const statusText = document.getElementById('syncStatusText');
-
-      try {
-        if (peer) peer.destroy();
+  <!-- モーダル2: 家族リンク共有QR -->
+  <div class="modal-overlay" id="syncModal" onclick="closeModalOnOverlay(event, 'syncModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📲 家族にリンクを送る</h2>
+        <button class="btn-close-modal" onclick="closeModal('syncModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>お子さんのiPadのカメラで以下のQRコードを読み取ると、このボードと同じ合言葉で開きます。</p>
         
-        // 端末ごとに一意のIDを生成し、合言葉グループで繋がる
-        const myPeerId = `keigo-${window.currentRoomId}-${Math.random().toString(36).substr(2, 6)}`;
-        peer = new Peer(myPeerId);
+        <div class="qr-container">
+          <div id="qrcode"></div>
+        </div>
 
-        peer.on('open', (id) => {
-          statusBadge.classList.remove('offline');
-          statusText.textContent = `🟢 リアルタイム通信中 (${window.currentRoomId})`;
-          connectToFamilyHub();
-        });
+        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom: 4px;">共有URL（LINEやメッセージで送る場合）:</div>
+        <div class="share-url-box">
+          <input type="text" id="shareUrlInput" readonly>
+          <button class="btn btn-primary" onclick="copyShareUrl()">コピー</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        peer.on('connection', (conn) => {
-          setupConnection(conn);
-        });
+  <!-- モーダル3: パスワード確認モーダル（削除時） -->
+  <div class="modal-overlay" id="passwordModal" onclick="closeModalOnOverlay(event, 'passwordModal')">
+    <div class="modal" style="max-width: 380px;">
+      <div class="modal-header">
+        <h2 style="color:var(--danger-dark);">🔒 削除パスワード認証</h2>
+        <button class="btn-close-modal" onclick="closeModal('passwordModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 12px; font-size: 0.85rem;" id="passwordModalMessage">
+          保護者パスワードを入力してください（初期値: 1234）
+        </p>
+        <div class="form-row">
+          <input type="password" id="deletePasswordInput" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter') executePasswordAction()">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+          <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="closeModal('passwordModal')">キャンセル</button>
+          <button class="btn btn-danger" onclick="executePasswordAction()">認証して削除</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        peer.on('error', (err) => {
-          console.warn('Peer error:', err);
-          statusText.textContent = '🟢 同期待機中';
-        });
-      } catch (e) {
-        console.error('Peer init failed', e);
-        statusBadge.classList.add('offline');
-        statusText.textContent = 'ローカル保存モード';
-      }
-    }
+  <!-- モーダル4: 期限選択モーダル -->
+  <div class="modal-overlay" id="datePickerModal" onclick="closeModalOnOverlay(event, 'datePickerModal')">
+    <div class="modal" style="max-width: 580px;">
+      <div class="modal-header">
+        <h2>📅 日付・期限の選択</h2>
+        <button class="btn-close-modal" onclick="closeModal('datePickerModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="picker-container">
+          <div class="picker-quick-buttons">
+            <button class="btn btn-settings" style="padding:4px 10px; font-size:0.78rem;" onclick="selectQuickDate('today')">今日</button>
+            <button class="btn btn-settings" style="padding:4px 10px; font-size:0.78rem;" onclick="selectQuickDate('tomorrow')">明日</button>
+            <button class="btn btn-settings" style="padding:4px 10px; font-size:0.78rem;" onclick="selectQuickDate('next_week')">1週間後</button>
+          </div>
 
-    function setupConnection(conn) {
-      conn.on('open', () => {
-        if (!activeConnections.includes(conn)) {
-          activeConnections.push(conn);
-        }
-        // 接続時に最新データを相手に送る
-        conn.send({ type: 'SYNC_TASKS', tasks: tasks, time: Date.now() });
-      });
+          <div class="picker-manual-box">
+            <span style="font-size:0.82rem; font-weight:700; color:#334155;">✏️ 数字で直接指定:</span>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <input type="number" id="manualMonthInput" min="1" max="12" placeholder="月" style="width:64px; padding:6px 8px; font-size:0.85rem;">
+              <span>月</span>
+              <input type="number" id="manualDayInput" min="1" max="31" placeholder="日" style="width:64px; padding:6px 8px; font-size:0.85rem;">
+              <span>日</span>
+              <button class="btn btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="applyManualDateInput()">決定</button>
+            </div>
+          </div>
 
-      conn.on('data', (data) => {
-        if (data && data.type === 'SYNC_TASKS' && Array.isArray(data.tasks)) {
-          // 外部からの更新を受信して画面に反映
-          tasks = data.tasks;
-          localStorage.setItem(`kanban_tasks_${window.currentRoomId}`, JSON.stringify(tasks));
-          render();
-          showToast('⚡ 別の端末から進捗が更新されました');
-        }
-      });
+          <div class="picker-months-row" id="pickerMonthsContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-      conn.on('close', () => {
-        activeConnections = activeConnections.filter(c => c !== conn);
-      });
-    }
+  <!-- モーダル5: 設定画面（クラウド設定・合言葉・PW変更・バックアップ） -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeModalOnOverlay(event, 'settingsModal')">
+    <div class="modal" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2>⚙️ 設定 &amp; クラウド同期</h2>
+        <button class="btn-close-modal" onclick="closeModal('settingsModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          🌐 クラウド本番同期モード設定
+        </h3>
+        <p style="font-size:0.8rem; color:#475569; margin-bottom:6px;">
+          iPadやスマホとリアルタイムに同期させるには、Firebaseの接続設定（JSON）を保存してください。未設定の場合は安全な「ローカル保存モード」で動作します。
+        </p>
+        <div class="form-row">
+          <textarea id="customFirebaseConfigInput" rows="3" placeholder='{"apiKey": "...", "projectId": "..."}' style="font-size:0.78rem; font-family:monospace;"></textarea>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-bottom:16px;">
+          <button class="btn btn-settings" style="font-size:0.8rem;" onclick="clearCustomFirebaseConfig()">設定をクリア（ローカルに戻す）</button>
+          <button class="btn btn-primary" style="font-size:0.8rem;" onclick="saveCustomFirebaseConfig()">クラウド設定を保存して接続</button>
+        </div>
 
-    function connectToFamilyHub() {
-      // 親と子供で互いに通信を確立
-      const hubId = `keigo-${window.currentRoomId}-host`;
-      const conn = peer.connect(hubId);
-      setupConnection(conn);
-    }
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-top:14px; margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          🏠 ファミリー合言葉（ルーム名）
+        </h3>
+        <div class="form-row">
+          <label>現在の合言葉:</label>
+          <input type="text" id="roomInput">
+        </div>
+        <div style="text-align:right; margin-bottom:16px;">
+          <button class="btn btn-primary" onclick="saveRoomFromSettings()">合言葉を変更して接続</button>
+        </div>
 
-    function broadcastTasks() {
-      // 端末でタスクを動かしたら、接続している全端末（iPhone・iPad）に即座に送信
-      activeConnections.forEach(conn => {
-        if (conn.open) {
-          conn.send({ type: 'SYNC_TASKS', tasks: tasks, time: Date.now() });
-        }
-      });
-    }
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          📦 データのバックアップと復元
+        </h3>
+        <p style="font-size:0.8rem; color:#475569; margin-bottom:8px;">
+          タスクと予定をファイルとしてダウンロード・復元できます。
+        </p>
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="exportBackupData()">💾 バックアップファイルを保存</button>
+        </div>
 
-    function save() {
-      localStorage.setItem(`kanban_tasks_${window.currentRoomId}`, JSON.stringify(tasks));
-      broadcastTasks();
-    }
+        <div class="backup-drop-zone" id="backupDropZone" onclick="document.getElementById('backupFileInput').click()">
+          <p style="font-size:0.85rem; font-weight:600; margin-bottom:4px;">📥 バックアップJSONファイルをここにドロップ</p>
+          <p style="font-size:0.75rem; color:#64748b;">またはクリックしてファイルを選択</p>
+          <input type="file" id="backupFileInput" accept=".json" style="display:none;" onchange="handleBackupFileSelect(this.files)">
+        </div>
+
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-top:18px; margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          🔐 保護者パスワードの変更
+        </h3>
+        <div class="form-row">
+          <label>現在のパスワード:</label>
+          <input type="password" id="currentPassInput" placeholder="初期値: 1234">
+        </div>
+        <div class="form-row">
+          <label>新しいパスワード:</label>
+          <input type="password" id="newPassInput" placeholder="新しいパスワード">
+        </div>
+        <div class="form-row">
+          <label>新しいパスワード（確認）:</label>
+          <input type="password" id="newPassConfirmInput" placeholder="もう一度入力">
+        </div>
+        <div style="text-align:right;">
+          <button class="btn btn-primary" onclick="changePassword()">パスワードを更新</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル6: イベントスケジュール登録モーダル（自由入力式） -->
+  <div class="modal-overlay" id="eventScheduleModal" onclick="closeModalOnOverlay(event, 'eventScheduleModal')">
+    <div class="modal" style="max-width: 460px;">
+      <div class="modal-header">
+        <h2 style="color:#7c3aed;">📅 イベントスケジュールの追加</h2>
+        <button class="btn-close-modal" onclick="closeModal('eventScheduleModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label style="color:var(--danger-dark);">日付 (必須):</label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="deadline-picker-btn" id="eventDatePickerBtn" onclick="openDatePickerModalForEvent()">
+              <span id="eventDateDisplay">📅 日付を選択してください</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-top:14px;">
+          <label style="color:var(--danger-dark);">イベント内容・予定 (必須):</label>
+          <input type="text" id="eventDetailInput" placeholder="例: 公開模試、算数通常、学校説明会、習い事など" onkeydown="if(event.key==='Enter') saveEventSchedule()">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;">
+          <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="closeModal('eventScheduleModal')">キャンセル</button>
+          <button class="btn btn-event" onclick="saveEventSchedule()">スケジュールを登録</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル7: イベント削除確認モーダル -->
+  <div class="modal-overlay" id="confirmDeleteEventModal" onclick="closeModalOnOverlay(event, 'confirmDeleteEventModal')">
+    <div class="modal" style="max-width: 400px;">
+      <div class="modal-header">
+        <h2 style="color:var(--danger-dark);">🗑️ イベントの削除確認</h2>
+        <button class="btn-close-modal" onclick="closeModal('confirmDeleteEventModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom: 16px; font-size: 0.9rem;" id="confirmDeleteEventMessage">
+          このスケジュールを削除してもよろしいですか？
+        </p>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button class="btn" style="background:#f1f5f9; border:1px solid #cbd5e1;" onclick="closeModal('confirmDeleteEventModal')">キャンセル</button>
+          <button class="btn btn-danger" id="btnExecuteDeleteEvent">削除する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let unsubscribeSync = null;
+
+    window.currentRoomId = window.currentRoomId || 'keigo-study-room';
+
+    window.dbSaveState = async function(tasksToSave, eventsToSave) {
+      const roomId = window.currentRoomId || 'keigo-study-room';
+      localStorage.setItem(`kanban_tasks_${roomId}`, JSON.stringify(tasksToSave));
+      localStorage.setItem(`kanban_events_${roomId}`, JSON.stringify(eventsToSave));
+
+      if (!db || !currentUser) return;
       try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', window.currentRoomId);
+        const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'default-app-id';
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', roomId);
         await setDoc(docRef, {
           tasks: tasksToSave,
+          events: eventsToSave,
           updatedAt: Date.now()
         }, { merge: true });
       } catch (err) {
@@ -1171,7 +1758,11 @@
       window.currentRoomId = newRoomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
       localStorage.setItem('kanban_last_room_id', window.currentRoomId);
       setupRealtimeListener();
-      window.showToast(`🏠 合言葉「${window.currentRoomId}」に接続しました`);
+      if (window.showToast) window.showToast(`🏠 合言葉「${window.currentRoomId}」に接続しました`);
+    };
+
+    window.reinitCloudSync = async function() {
+      await initCloudSync();
     };
 
     async function initCloudSync() {
@@ -1183,16 +1774,32 @@
         const savedRoom = localStorage.getItem('kanban_last_room_id');
         if (savedRoom) window.currentRoomId = savedRoom;
       }
+      window.currentRoomId = window.currentRoomId || 'keigo-study-room';
 
-      if (typeof __firebase_config === 'undefined') {
-        document.getElementById('syncStatusText').textContent = 'ローカル保存モード';
-        window.loadLocalTasks();
+      let configString = null;
+      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        configString = __firebase_config;
+      } else {
+        configString = localStorage.getItem('kanban_custom_firebase_config');
+      }
+
+      const syncBadge = document.getElementById('syncStatusBadge');
+      const syncText = document.getElementById('syncStatusText');
+
+      if (!configString) {
+        if (syncBadge && syncText) {
+          syncBadge.className = 'sync-status local';
+          syncText.textContent = 'ローカル保存モード';
+        }
+        if (window.loadLocalData) window.loadLocalData();
         return;
       }
 
       try {
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
+        const firebaseConfig = JSON.parse(configString);
+        const existingApps = getApps();
+        let app = existingApps.length > 0 ? existingApps[0] : initializeApp(firebaseConfig);
+        
         auth = getAuth(app);
         db = getFirestore(app);
 
@@ -1205,14 +1812,20 @@
         onAuthStateChanged(auth, (user) => {
           currentUser = user;
           if (user) {
-            document.getElementById('syncStatusText').textContent = 'リアルタイム同期中';
+            if (syncBadge && syncText) {
+              syncBadge.className = 'sync-status online';
+              syncText.textContent = 'リアルタイム同期中 (本番)';
+            }
             setupRealtimeListener();
           }
         });
       } catch (e) {
         console.error("Cloud init fallback:", e);
-        document.getElementById('syncStatusText').textContent = 'オフライン保存モード';
-        window.loadLocalTasks();
+        if (syncBadge && syncText) {
+          syncBadge.className = 'sync-status local';
+          syncText.textContent = 'ローカル保存モード';
+        }
+        if (window.loadLocalData) window.loadLocalData();
       }
     }
 
@@ -1220,17 +1833,18 @@
       if (!db || !currentUser) return;
       if (unsubscribeSync) unsubscribeSync();
 
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', window.currentRoomId);
+      const roomId = window.currentRoomId || 'keigo-study-room';
+      const appId = typeof __app_id !== 'undefined' && __app_id ? __app_id : 'default-app-id';
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', roomId);
 
       unsubscribeSync = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data && Array.isArray(data.tasks)) {
-            window.setTasksFromCloud(data.tasks);
+          if (data && window.setDataFromCloud) {
+            window.setDataFromCloud(data.tasks || [], data.events || []);
           }
-        } else {
-          window.initDefaultTasks();
+        } else if (window.initDefaultData) {
+          window.initDefaultData();
         }
       }, (error) => {
         console.error("Sync listener error:", error);
@@ -1240,22 +1854,31 @@
     window.addEventListener('DOMContentLoaded', initCloudSync);
   </script>
 
-  <!-- アプリ本体ロジック -->
   <script>
     const DEFAULT_PASS = '1234';
     const PASS_KEY = 'kanban_admin_password';
-    window.currentRoomId = 'keigo-study-room';
+    window.currentRoomId = window.currentRoomId || 'keigo-study-room';
 
     let tasks = [];
+    let events = [];
     let isSelectMode = false;
     let selectedTaskIds = new Set();
     let pendingAction = null;
+    let targetDeleteEventId = null;
+    let datePickerTarget = 'task'; // 'task' | 'event' | 'edit_task'
+    let editingTaskId = null;
+    let editingTaskTempDueDate = '';
 
-    // 現在選択されているフォームのボタングループ値
     let selectedFormValues = {
       subject: '算数',
       type: '宿題',
-      round: '1'
+      round: '1',
+      dueDate: ''
+    };
+
+    let selectedEventValues = {
+      date: '',
+      detail: ''
     };
 
     const STATUS_NAMES = [
@@ -1266,12 +1889,192 @@
       '✨ 5. 提出済み'
     ];
 
+    /* 日本の祝日判定アルゴリズム (祝日法準拠) */
+    function getJapaneseHoliday(year, month, day) {
+      function getVernalEquinoxDay(y) {
+        if (y <= 1979) return Math.floor(20.8357 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+        if (y <= 2099) return Math.floor(20.8431 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+        return Math.floor(21.8510 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+      }
+      function getAutumnalEquinoxDay(y) {
+        if (y <= 1979) return Math.floor(23.2588 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+        if (y <= 2099) return Math.floor(23.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+        return Math.floor(24.2488 + 0.242194 * (y - 1980) - Math.floor((y - 1980) / 4));
+      }
+
+      function getNthMonday(y, m, n) {
+        const firstDayOfWeek = new Date(y, m - 1, 1).getDay();
+        let offset = (1 - firstDayOfWeek + 7) % 7;
+        return 1 + offset + (n - 1) * 7;
+      }
+
+      function getRawHoliday(y, m, d) {
+        if (m === 1 && d === 1) return '元日';
+        if (m === 1 && d === getNthMonday(y, 1, 2)) return '成人の日';
+        if (m === 2 && d === 11) return '建国記念の日';
+        if (m === 2 && d === 23 && y >= 2020) return '天皇誕生日';
+        if (m === 3 && d === getVernalEquinoxDay(y)) return '春分の日';
+        if (m === 4 && d === 29) return '昭和の日';
+        if (m === 5 && d === 3) return '憲法記念日';
+        if (m === 5 && d === 4) return 'みどりの日';
+        if (m === 5 && d === 5) return 'こどもの日';
+        if (m === 7 && d === getNthMonday(y, 7, 3)) return '海の日';
+        if (m === 8 && d === 11 && y >= 2016) return '山の日';
+        if (m === 9 && d === getNthMonday(y, 9, 3)) return '敬老の日';
+        if (m === 9 && d === getAutumnalEquinoxDay(y)) return '秋分の日';
+        if (m === 10 && d === getNthMonday(y, 10, 2)) return 'スポーツの日';
+        if (m === 11 && d === 3) return '文化の日';
+        if (m === 11 && d === 23) return '勤労感謝の日';
+        if (m === 12 && d === 23 && y >= 1989 && y <= 2018) return '天皇誕生日';
+
+        // 国民の休日 (祝日と祝日に挟まれた平日)
+        if (m === 9) {
+          const keiro = getNthMonday(y, 9, 3);
+          const shubun = getAutumnalEquinoxDay(y);
+          if (shubun === keiro + 2 && d === keiro + 1) {
+            return '国民の休日';
+          }
+        }
+        return null;
+      }
+
+      const holiday = getRawHoliday(year, month, day);
+      if (holiday) return holiday;
+
+      // 振替休日判定
+      const curDate = new Date(year, month - 1, day);
+      const dayOfWeek = curDate.getDay();
+      if (dayOfWeek !== 0) {
+        let checkDate = new Date(year, month - 1, day - 1);
+        while (checkDate.getFullYear() === year) {
+          const cy = checkDate.getFullYear();
+          const cm = checkDate.getMonth() + 1;
+          const cd = checkDate.getDate();
+          const isCheckHoliday = getRawHoliday(cy, cm, cd);
+          if (isCheckHoliday) {
+            if (checkDate.getDay() === 0) {
+              return '振替休日';
+            }
+            checkDate = new Date(cy, cm - 1, cd - 1);
+          } else {
+            break;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function getHolidayString(dateStr) {
+      if (!dateStr) return null;
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return null;
+      const y = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10);
+      const d = parseInt(parts[2], 10);
+      return getJapaneseHoliday(y, m, d);
+    }
+
+    function getShortSubject(subject) {
+      const map = {
+        '算数': '算',
+        '国語': '国',
+        '理科': '理',
+        '社会': '社',
+        'その他': '他'
+      };
+      return map[subject] || (subject ? subject.charAt(0) : '');
+    }
+
+    /* 種別の短縮表示（計算→計、総問1→総1、総問2→総2） */
+    function getShortType(type) {
+      const map = {
+        '計算': '計',
+        '総問1': '総1',
+        '総問2': '総2'
+      };
+      return map[type] || type || '';
+    }
+
     window.onload = () => {
       updatePrintDate();
+      populateMathRoundSelect();
+      updateMathSpecialVisibility();
+      setupBackupDropZone();
+      loadLocalData();
     };
+
+    function setupBackupDropZone() {
+      const dropZone = document.getElementById('backupDropZone');
+      if (!dropZone) return;
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('dragover');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('dragover');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('dragover');
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        handleBackupFileSelect(files);
+      }, false);
+    }
+
+    function populateMathRoundSelect() {
+      const select = document.getElementById('mathRoundSelect');
+      if (!select) return;
+      select.innerHTML = '<option value="">指定なし</option>';
+      for (let i = 30; i <= 100; i++) {
+        const opt = document.createElement('option');
+        opt.value = i.toString();
+        opt.textContent = `第${i}回`;
+        select.appendChild(opt);
+      }
+    }
+
+    function updateMathSpecialVisibility() {
+      const isMath = selectedFormValues.subject === '算数';
+      const mathBtns = document.querySelectorAll('.math-only-btn');
+      const mathRoundWrapper = document.getElementById('mathRoundWrapper');
+
+      mathBtns.forEach(btn => {
+        btn.style.display = isMath ? 'inline-flex' : 'none';
+      });
+      if (mathRoundWrapper) {
+        mathRoundWrapper.style.display = isMath ? 'inline-flex' : 'none';
+      }
+
+      if (!isMath && ['計算', '総問1', '総問2'].includes(selectedFormValues.type)) {
+        setChoice('type', '宿題');
+      }
+    }
 
     function setChoice(category, value) {
       selectedFormValues[category] = value;
+      
+      if (category === 'subject') {
+        updateMathSpecialVisibility();
+      }
+
+      if (category === 'round') {
+        const select = document.getElementById('mathRoundSelect');
+        if (select) select.value = '';
+      }
+
       const groupElem = document.getElementById(`${category}Group`);
       if (groupElem) {
         groupElem.querySelectorAll('.choice-btn').forEach(btn => {
@@ -1284,77 +2087,509 @@
       }
     }
 
+    function onMathRoundSelectChange(val) {
+      if (val) {
+        selectedFormValues.round = val;
+        const groupElem = document.getElementById('roundGroup');
+        if (groupElem) {
+          groupElem.querySelectorAll('.choice-btn').forEach(btn => btn.classList.remove('active'));
+        }
+      } else {
+        setChoice('round', '1');
+      }
+    }
+
     function getAdminPassword() {
       return localStorage.getItem(PASS_KEY) || DEFAULT_PASS;
     }
 
-    function showToast(message) {
+    window.showToast = function(message) {
       const toast = document.getElementById('toast');
+      if (!toast) return;
       toast.textContent = message;
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 2400);
-    }
+    };
 
     function updatePrintDate() {
+      const elem = document.getElementById('print-date');
+      if (!elem) return;
       const today = new Date();
       const days = ['日', '月', '火', '水', '木', '金', '土'];
-      document.getElementById('print-date').textContent = 
+      elem.textContent = 
         `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日 (${days[today.getDay()]})`;
     }
 
-    function setTasksFromCloud(cloudTasks) {
-      tasks = cloudTasks;
-      render();
+    function formatDueDateDisplay(dateStr) {
+      if (!dateStr) return '';
+      const parts = dateStr.split('-');
+      if (parts.length !== 3) return dateStr;
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const days = ['日', '月', '火', '水', '木', '金', '土'];
+      const holiday = getHolidayString(dateStr);
+      const holidayText = holiday ? ` [${holiday}]` : '';
+      return `${parseInt(parts[1], 10)}月${parseInt(parts[2], 10)}日(${days[d.getDay()]})${holidayText}`;
     }
 
-    function loadLocalTasks() {
-      const saved = localStorage.getItem(`kanban_tasks_${window.currentRoomId}`);
-      if (saved) {
-        tasks = JSON.parse(saved);
+    function updateDeadlineDisplay() {
+      const btn = document.getElementById('deadlinePickerBtn');
+      const textSpan = document.getElementById('deadlineDisplay');
+      const clearBtn = document.getElementById('btnClearDate');
+
+      if (!btn || !textSpan || !clearBtn) return;
+
+      if (selectedFormValues.dueDate) {
+        btn.classList.add('has-value');
+        textSpan.innerHTML = `📅 期限: <strong>${formatDueDateDisplay(selectedFormValues.dueDate)}</strong>`;
+        clearBtn.classList.add('active');
+      } else {
+        btn.classList.remove('has-value');
+        textSpan.textContent = '📅 期限を選択してください';
+        clearBtn.classList.remove('active');
+      }
+    }
+
+    function updateEventDateDisplay() {
+      const btn = document.getElementById('eventDatePickerBtn');
+      const textSpan = document.getElementById('eventDateDisplay');
+
+      if (!btn || !textSpan) return;
+
+      if (selectedEventValues.date) {
+        btn.classList.add('has-value');
+        textSpan.innerHTML = `📅 日付: <strong>${formatDueDateDisplay(selectedEventValues.date)}</strong>`;
+      } else {
+        btn.classList.remove('has-value');
+        textSpan.textContent = '📅 日付を選択してください';
+      }
+    }
+
+    function clearSelectedDate() {
+      selectedFormValues.dueDate = '';
+      updateDeadlineDisplay();
+    }
+
+    function openDatePickerModal() {
+      datePickerTarget = 'task';
+      renderDatePickerMonths();
+      const modal = document.getElementById('datePickerModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function openDatePickerModalForEvent() {
+      datePickerTarget = 'event';
+      renderDatePickerMonths();
+      const modal = document.getElementById('datePickerModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function openDatePickerModalForEdit(taskId) {
+      datePickerTarget = 'edit_task';
+      editingTaskId = taskId;
+      renderDatePickerMonths();
+      const modal = document.getElementById('datePickerModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function calculateTargetYear(month) {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      return month < currentMonth ? currentYear + 1 : currentYear;
+    }
+
+    function renderDatePickerMonths() {
+      const container = document.getElementById('pickerMonthsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const now = new Date();
+      const todayY = now.getFullYear();
+      const todayM = now.getMonth();
+      const todayD = now.getDate();
+      const todayMidnight = new Date(todayY, todayM, todayD).getTime();
+
+      let currentlySelected = '';
+      if (datePickerTarget === 'task') {
+        currentlySelected = selectedFormValues.dueDate;
+      } else if (datePickerTarget === 'event') {
+        currentlySelected = selectedEventValues.date;
+      } else if (datePickerTarget === 'edit_task') {
+        currentlySelected = editingTaskTempDueDate;
+      }
+
+      for (let i = 0; i < 2; i++) {
+        const targetDate = new Date(todayY, todayM + i, 1);
+        const y = targetDate.getFullYear();
+        const m = targetDate.getMonth();
+
+        const card = document.createElement('div');
+        card.className = 'picker-month-card';
+
+        const title = document.createElement('div');
+        title.className = 'picker-month-title';
+        title.textContent = `${y}年 ${m + 1}月`;
+        card.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'picker-grid';
+
+        const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+        weekdays.forEach((wd, idx) => {
+          const wDiv = document.createElement('div');
+          wDiv.className = `picker-weekday ${idx === 0 ? 'sun' : (idx === 6 ? 'sat' : '')}`;
+          wDiv.textContent = wd;
+          grid.appendChild(wDiv);
+        });
+
+        const firstDayOfWeek = new Date(y, m, 1).getDay();
+        const lastDate = new Date(y, m + 1, 0).getDate();
+
+        for (let b = 0; b < firstDayOfWeek; b++) {
+          const empty = document.createElement('div');
+          grid.appendChild(empty);
+        }
+
+        for (let d = 1; d <= lastDate; d++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'picker-day-btn';
+
+          const dateObj = new Date(y, m, d);
+          const dateMid = dateObj.getTime();
+          const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const holiday = getJapaneseHoliday(y, m + 1, d);
+
+          btn.innerHTML = `<span>${d}</span>${holiday ? `<span style="font-size:0.55rem; line-height:1; color:var(--holiday-color); transform:scale(0.85);">${holiday.slice(0, 3)}</span>` : ''}`;
+
+          if (holiday) {
+            btn.classList.add('is-holiday');
+          }
+
+          if (dateMid < todayMidnight) {
+            btn.disabled = true;
+          } else {
+            if (dateMid === todayMidnight) {
+              btn.classList.add('today-highlight');
+            }
+            if (currentlySelected === dateStr) {
+              btn.classList.add('selected');
+            }
+            btn.onclick = () => {
+              if (datePickerTarget === 'task') {
+                selectedFormValues.dueDate = dateStr;
+                updateDeadlineDisplay();
+                showToast(`📅 期限を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+              } else if (datePickerTarget === 'event') {
+                selectedEventValues.date = dateStr;
+                updateEventDateDisplay();
+                showToast(`📅 イベント日を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+              } else if (datePickerTarget === 'edit_task') {
+                editingTaskTempDueDate = dateStr;
+                const editDateDisplay = document.getElementById('editTaskDateDisplay');
+                if (editDateDisplay) {
+                  editDateDisplay.textContent = formatDueDateDisplay(dateStr);
+                }
+                showToast(`📅 変更後の期限を「${formatDueDateDisplay(dateStr)}」に選択しました`);
+              }
+              closeModal('datePickerModal');
+            };
+          }
+          grid.appendChild(btn);
+        }
+
+        card.appendChild(grid);
+        container.appendChild(card);
+      }
+    }
+
+    function selectQuickDate(type) {
+      const now = new Date();
+      let target = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      if (type === 'today') {
+      } else if (type === 'tomorrow') {
+        target.setDate(target.getDate() + 1);
+      } else if (type === 'next_week') {
+        target.setDate(target.getDate() + 7);
+      }
+
+      const y = target.getFullYear();
+      const m = String(target.getMonth() + 1).padStart(2, '0');
+      const d = String(target.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${d}`;
+
+      if (datePickerTarget === 'task') {
+        selectedFormValues.dueDate = dateStr;
+        updateDeadlineDisplay();
+        showToast(`📅 期限を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+      } else if (datePickerTarget === 'event') {
+        selectedEventValues.date = dateStr;
+        updateEventDateDisplay();
+        showToast(`📅 イベント日を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+      } else if (datePickerTarget === 'edit_task') {
+        editingTaskTempDueDate = dateStr;
+        const editDateDisplay = document.getElementById('editTaskDateDisplay');
+        if (editDateDisplay) {
+          editDateDisplay.textContent = formatDueDateDisplay(dateStr);
+        }
+        showToast(`📅 変更後の期限を「${formatDueDateDisplay(dateStr)}」に選択しました`);
+      }
+      closeModal('datePickerModal');
+    }
+
+    function applyManualDateInput() {
+      const mVal = parseInt(document.getElementById('manualMonthInput').value, 10);
+      const dVal = parseInt(document.getElementById('manualDayInput').value, 10);
+
+      if (isNaN(mVal) || isNaN(dVal) || mVal < 1 || mVal > 12 || dVal < 1 || dVal > 31) {
+        showToast('⚠️ 正しい月日を入力してください');
+        return;
+      }
+
+      const year = calculateTargetYear(mVal);
+      const targetDate = new Date(year, mVal - 1, dVal);
+
+      if (targetDate.getMonth() !== (mVal - 1) || targetDate.getDate() !== dVal) {
+        showToast('⚠️ 存在しない日付です');
+        return;
+      }
+
+      const now = new Date();
+      const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+      if (targetDate.getTime() < todayMid) {
+        showToast('⚠️ 過去の日付は登録できません');
+        return;
+      }
+
+      const dateStr = `${year}-${String(mVal).padStart(2, '0')}-${String(dVal).padStart(2, '0')}`;
+      if (datePickerTarget === 'task') {
+        selectedFormValues.dueDate = dateStr;
+        updateDeadlineDisplay();
+        showToast(`📅 期限を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+      } else if (datePickerTarget === 'event') {
+        selectedEventValues.date = dateStr;
+        updateEventDateDisplay();
+        showToast(`📅 イベント日を「${formatDueDateDisplay(dateStr)}」に設定しました`);
+      } else if (datePickerTarget === 'edit_task') {
+        editingTaskTempDueDate = dateStr;
+        const editDateDisplay = document.getElementById('editTaskDateDisplay');
+        if (editDateDisplay) {
+          editDateDisplay.textContent = formatDueDateDisplay(dateStr);
+        }
+        showToast(`📅 変更後の期限を「${formatDueDateDisplay(dateStr)}」に選択しました`);
+      }
+      closeModal('datePickerModal');
+    }
+
+    function openEventModal() {
+      selectedEventValues.date = selectedEventValues.date || new Date().toISOString().slice(0, 10);
+      updateEventDateDisplay();
+      const input = document.getElementById('eventDetailInput');
+      if (input) input.value = '';
+      const modal = document.getElementById('eventScheduleModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function saveEventSchedule() {
+      if (!selectedEventValues.date) {
+        showToast('⚠️ 日付を必ず設定してください');
+        return;
+      }
+
+      const detailInput = document.getElementById('eventDetailInput');
+      const detailVal = detailInput ? detailInput.value.trim() : '';
+
+      if (!detailVal) {
+        showToast('⚠️ イベント内容を入力してください');
+        if (detailInput) detailInput.focus();
+        return;
+      }
+
+      events.push({
+        id: 'evt_' + Date.now().toString(),
+        date: selectedEventValues.date,
+        detail: detailVal
+      });
+
+      save();
+      render();
+      closeModal('eventScheduleModal');
+      showToast('📅 イベントスケジュールを追加しました');
+    }
+
+    function promptDeleteEvent(eventId) {
+      const evt = events.find(e => e.id === eventId);
+      if (!evt) return;
+      targetDeleteEventId = eventId;
+      const label = evt.detail || 'このイベント';
+      
+      const msg = document.getElementById('confirmDeleteEventMessage');
+      if (msg) {
+        msg.innerHTML = `スケジュール「<strong>${escapeHtml(label)}</strong>」(${formatDueDateDisplay(evt.date)}) を削除してもよろしいですか？`;
+      }
+      
+      const btn = document.getElementById('btnExecuteDeleteEvent');
+      if (btn) {
+        btn.onclick = () => {
+          executeDeleteEvent();
+        };
+      }
+      
+      const modal = document.getElementById('confirmDeleteEventModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function executeDeleteEvent() {
+      if (!targetDeleteEventId) return;
+      events = events.filter(e => e.id !== targetDeleteEventId);
+      targetDeleteEventId = null;
+      save();
+      render();
+      closeModal('confirmDeleteEventModal');
+      showToast('🗑️ スケジュールを削除しました');
+    }
+
+    function exportBackupData() {
+      const backupData = {
+        version: "3.0",
+        exportDate: new Date().toISOString(),
+        roomId: window.currentRoomId,
+        tasks: tasks,
+        events: events
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      const fileName = `keigo_study_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", fileName);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast('💾 バックアップファイルを保存しました');
+    }
+
+    function handleBackupFileSelect(files) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (parsed && Array.isArray(parsed.tasks)) {
+            tasks = parsed.tasks;
+            events = Array.isArray(parsed.events) ? parsed.events : [];
+            save();
+            render();
+            closeModal('settingsModal');
+            showToast(`✅ バックアップから復元しました（タスク ${tasks.length}件、イベント ${events.length}件）`);
+          } else {
+            showToast('❌ 有効なバックアップファイルではありません');
+          }
+        } catch (err) {
+          console.error("Restore error:", err);
+          showToast('❌ ファイルの読み込みに失敗しました');
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    window.setDataFromCloud = function(cloudTasks, cloudEvents) {
+      tasks = cloudTasks || [];
+      events = cloudEvents || [];
+      render();
+    };
+
+    window.loadLocalData = function() {
+      const roomId = window.currentRoomId || 'keigo-study-room';
+      const savedTasks = localStorage.getItem(`kanban_tasks_${roomId}`);
+      const savedEvents = localStorage.getItem(`kanban_events_${roomId}`);
+
+      if (savedTasks) {
+        try {
+          tasks = JSON.parse(savedTasks);
+        } catch (e) {
+          initDefaultTasks();
+        }
       } else {
         initDefaultTasks();
       }
+
+      if (savedEvents) {
+        try {
+          events = JSON.parse(savedEvents);
+        } catch (e) {
+          events = [];
+        }
+      } else {
+        events = [];
+      }
       render();
-    }
+    };
+
+    window.initDefaultData = function() {
+      initDefaultTasks();
+      events = [
+        { id: 'evt_1', date: new Date().toISOString().slice(0, 10), detail: '算数通常授業' }
+      ];
+      save();
+    };
 
     function initDefaultTasks() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const tomorrow = new Date(now.getTime() + 86400000);
+      const tomM = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const tomD = String(tomorrow.getDate()).padStart(2, '0');
+
       tasks = [
-        { id: '1', subject: '算数', type: '宿題', round: '1', text: '計算ドリル 第5回 (p.24〜25)', memo: '目標20分', status: 0 },
-        { id: '2', subject: '国語', type: 'テスト直し', round: '2', text: '第3回 漢字テスト解き直し', memo: 'トメ・ハネ注意', status: 1 },
-        { id: '3', subject: '理科', type: '宿題', round: '1', text: '植物の成長まとめノート', memo: '図も描く', status: 2 },
-        { id: '4', subject: '社会', type: 'テスト直し', round: '1', text: '歴史年表テストの復習', memo: '丸付け待ち', status: 3 },
-        { id: '5', subject: '算数', type: '宿題', round: '3', text: '図形問題プリント No.4', memo: '提出完了！', status: 4 }
+        { id: '1', subject: '算数', type: '計算', round: '30', text: '計算ドリル 第30回 (p.24〜25)', memo: '目標15分', dueDate: `${y}-${m}-${d}`, status: 0 },
+        { id: '2', subject: '国語', type: 'テスト直し', round: '2', text: '第3回 漢字テスト解き直し', memo: 'トメ・ハネ注意', dueDate: `${tomorrow.getFullYear()}-${tomM}-${tomD}`, status: 1 },
+        { id: '3', subject: '算数', type: '総問1', round: '45', text: '', memo: '途中式も書く', dueDate: `${y}-${m}-${d}`, status: 2 },
+        { id: '4', subject: '理科', type: '宿題', round: '1', text: '植物の成長まとめノート', memo: '図も描く', dueDate: `${tomorrow.getFullYear()}-${tomM}-${tomD}`, status: 3 },
+        { id: '5', subject: '算数', type: '総問2', round: '60', text: '', memo: '提出完了！', dueDate: `${y}-${m}-${d}`, status: 4 }
       ];
       save();
       render();
     }
 
     function save() {
-      if (window.dbSaveTasks) {
-        window.dbSaveTasks(tasks);
+      if (window.dbSaveState) {
+        window.dbSaveState(tasks, events);
       } else {
-        localStorage.setItem(`kanban_tasks_${window.currentRoomId}`, JSON.stringify(tasks));
+        const roomId = window.currentRoomId || 'keigo-study-room';
+        localStorage.setItem(`kanban_tasks_${roomId}`, JSON.stringify(tasks));
+        localStorage.setItem(`kanban_events_${roomId}`, JSON.stringify(events));
       }
     }
 
     function addTask() {
-      const textInput = document.getElementById('taskInput');
-      const memoInput = document.getElementById('memoInput');
-      const text = textInput.value.trim();
-      const memo = memoInput.value.trim();
-
-      if (!text) {
-        textInput.focus();
+      if (!selectedFormValues.dueDate) {
+        showToast('⚠️ 期限（日付）を必ず設定してください');
+        openDatePickerModal();
         return;
       }
+
+      const textInput = document.getElementById('taskInput');
+      const memoInput = document.getElementById('memoInput');
+      const text = textInput ? textInput.value.trim() : '';
+      const memo = memoInput ? memoInput.value.trim() : '';
 
       tasks.push({
         id: Date.now().toString(),
         subject: selectedFormValues.subject,
         type: selectedFormValues.type,
-        round: selectedFormValues.round,
+        round: selectedFormValues.round || '1',
         text: text,
         memo: memo,
+        dueDate: selectedFormValues.dueDate,
         status: 0
       });
 
@@ -1362,42 +2597,60 @@
       render();
       showToast('＋ タスクを追加しました');
 
-      textInput.value = '';
-      memoInput.value = '';
-      // 回数は初期値の「1」に戻す
+      if (textInput) textInput.value = '';
+      if (memoInput) memoInput.value = '';
       setChoice('round', '1');
-      textInput.focus();
+      clearSelectedDate();
+      if (textInput) textInput.focus();
     }
 
-    /* ----------------------------------------------------
-       カード拡大詳細モーダル
-    ---------------------------------------------------- */
     function openCardDetail(id) {
       const task = tasks.find(t => t.id === id);
       if (!task) return;
 
+      editingTaskId = task.id;
+      editingTaskTempDueDate = task.dueDate || '';
+
       const roundNum = task.round || '1';
       const typeLabel = task.type || '宿題';
+      const shortSubj = getShortSubject(task.subject);
+      const shortType = getShortType(typeLabel);
       const container = document.getElementById('cardDetailContent');
+
+      if (!container) return;
 
       container.innerHTML = `
         <div class="detail-badge-row">
-          <span class="detail-tag tag-${task.subject}">${task.subject}</span>
-          <span class="detail-subtag sub-tag-${typeLabel}">${typeLabel}</span>
-          <span class="detail-round round-${roundNum}">${roundNum}</span>
-          <span style="font-size:0.8rem; color:var(--text-sub); margin-left:auto;">(${roundNum}回目)</span>
+          <span class="detail-tag tag-${task.subject}">${shortSubj}</span>
+          <span class="detail-subtag sub-tag-${typeLabel}">${shortType}</span>
+          <span class="detail-round">${roundNum}回</span>
+          <span style="font-size:0.8rem; color:var(--text-sub); margin-left:auto;">(${task.subject} / ${roundNum}回)</span>
         </div>
 
-        <div class="detail-card-text">
-          ${escapeHtml(task.text)}
-        </div>
-
-        ${task.memo ? `
-          <div class="detail-memo-box">
-            <strong>📝 メモ・目標:</strong><br>
-            ${escapeHtml(task.memo)}
+        <div class="detail-edit-box">
+          <div>
+            <label class="detail-edit-label">📝 やる内容:</label>
+            <input type="text" id="editTaskTextInput" value="${escapeHtml(task.text || '')}" placeholder="例: テキスト p.24〜25 (未入力可)">
           </div>
-        ` : ''}
+
+          <div>
+            <label class="detail-edit-label">🎯 メモ・目標:</label>
+            <input type="text" id="editTaskMemoInput" value="${escapeHtml(task.memo || '')}" placeholder="例: 目標20分、途中式も書く (任意)">
+          </div>
+
+          <div>
+            <label class="detail-edit-label" style="color:var(--danger-dark);">📅 期限日 (必須):</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <button type="button" class="deadline-picker-btn has-value" onclick="openDatePickerModalForEdit('${task.id}')">
+                <span id="editTaskDateDisplay">📅 ${formatDueDateDisplay(editingTaskTempDueDate)}</span>
+              </button>
+            </div>
+          </div>
+
+          <div style="text-align:right; margin-top:4px;">
+            <button class="btn btn-primary" onclick="saveTaskDetails('${task.id}')">💾 変更を保存</button>
+          </div>
+        </div>
 
         <div class="detail-status-row">
           <span>現在の進捗状況:</span>
@@ -1405,7 +2658,7 @@
         </div>
 
         <div class="detail-actions">
-          <div>
+          <div style="display:flex; gap:6px;">
             ${task.status > 0 ? `<button class="btn btn-primary" onclick="moveTask('${task.id}', -1); openCardDetail('${task.id}');">◀ 1つ戻す</button>` : ''}
             ${task.status < 4 ? `<button class="btn btn-primary" onclick="moveTask('${task.id}', 1); openCardDetail('${task.id}');">進める ▶</button>` : ''}
           </div>
@@ -1413,18 +2666,40 @@
         </div>
       `;
 
-      document.getElementById('cardDetailModal').classList.add('active');
+      const modal = document.getElementById('cardDetailModal');
+      if (modal) modal.classList.add('active');
     }
 
-    /* ----------------------------------------------------
-       パスワード認証付き削除処理
-    ---------------------------------------------------- */
+    function saveTaskDetails(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      const textIn = document.getElementById('editTaskTextInput');
+      const memoIn = document.getElementById('editTaskMemoInput');
+
+      if (!editingTaskTempDueDate) {
+        showToast('⚠️ 期限日を必ず設定してください');
+        return;
+      }
+
+      task.text = textIn ? textIn.value.trim() : '';
+      task.memo = memoIn ? memoIn.value.trim() : '';
+      task.dueDate = editingTaskTempDueDate;
+
+      save();
+      render();
+      closeModal('cardDetailModal');
+      showToast('💾 やることの内容を更新しました！');
+    }
+
     function requestSingleDelete(id) {
       const task = tasks.find(t => t.id === id);
-      const title = task ? `「${task.text}」` : 'このタスク';
+      const title = task ? `「${task.text || task.subject + ' ' + task.type}」` : 'このタスク';
       
-      document.getElementById('passwordModalMessage').textContent = 
-        `${title} を削除するには保護者パスワードを入力してください。`;
+      const msg = document.getElementById('passwordModalMessage');
+      if (msg) {
+        msg.textContent = `${title} を削除するには保護者パスワードを入力してください。`;
+      }
 
       pendingAction = () => {
         tasks = tasks.filter(t => t.id !== id);
@@ -1443,8 +2718,10 @@
         return;
       }
 
-      document.getElementById('passwordModalMessage').textContent = 
-        `選択した ${selectedTaskIds.size} 件の完了タスクを完全に削除します。保護者パスワードを入力してください。`;
+      const msg = document.getElementById('passwordModalMessage');
+      if (msg) {
+        msg.textContent = `選択した ${selectedTaskIds.size} 件の完了タスクを完全に削除します。保護者パスワードを入力してください。`;
+      }
 
       pendingAction = () => {
         tasks = tasks.filter(t => !selectedTaskIds.has(t.id));
@@ -1460,13 +2737,15 @@
 
     function openPasswordModal() {
       const input = document.getElementById('deletePasswordInput');
-      input.value = '';
-      document.getElementById('passwordModal').classList.add('active');
-      setTimeout(() => input.focus(), 100);
+      if (input) input.value = '';
+      const modal = document.getElementById('passwordModal');
+      if (modal) modal.classList.add('active');
+      setTimeout(() => { if (input) input.focus(); }, 100);
     }
 
     function executePasswordAction() {
-      const enteredPass = document.getElementById('deletePasswordInput').value;
+      const input = document.getElementById('deletePasswordInput');
+      const enteredPass = input ? input.value : '';
       const currentPass = getAdminPassword();
 
       if (enteredPass === currentPass) {
@@ -1477,21 +2756,20 @@
         }
       } else {
         showToast('❌ パスワードが違います');
-        document.getElementById('deletePasswordInput').value = '';
+        if (input) input.value = '';
       }
     }
 
-    /* ----------------------------------------------------
-       選択削除モードのUI
-    ---------------------------------------------------- */
     function toggleSelectMode(forceState) {
       isSelectMode = forceState !== undefined ? forceState : !isSelectMode;
       const bar = document.getElementById('batchActionBar');
-      if (isSelectMode) {
-        bar.classList.add('active');
-      } else {
-        bar.classList.remove('active');
-        selectedTaskIds.clear();
+      if (bar) {
+        if (isSelectMode) {
+          bar.classList.add('active');
+        } else {
+          bar.classList.remove('active');
+          selectedTaskIds.clear();
+        }
       }
       render();
     }
@@ -1517,7 +2795,8 @@
     }
 
     function updateSelectedCountDisplay() {
-      document.getElementById('selectedCountText').textContent = `${selectedTaskIds.size}件選択中`;
+      const countEl = document.getElementById('selectedCountText');
+      if (countEl) countEl.textContent = `${selectedTaskIds.size}件選択中`;
     }
 
     function moveTask(id, step) {
@@ -1533,7 +2812,6 @@
       }
     }
 
-    // ドラッグ＆ドロップ
     let draggedTaskId = null;
     function handleDragStart(e, id) {
       draggedTaskId = id;
@@ -1565,7 +2843,6 @@
       }
     }
 
-    // 画面描画
     function render() {
       for (let i = 0; i <= 4; i++) {
         const container = document.querySelector(`.lane[data-status="${i}"] .cards-container`);
@@ -1575,78 +2852,286 @@
       }
 
       const counts = [0, 0, 0, 0, 0];
+      const todayStr = new Date().toISOString().slice(0, 10);
 
-      tasks.forEach(task => {
-        counts[task.status]++;
-        const container = document.querySelector(`.lane[data-status="${task.status}"] .cards-container`);
-        if (!container) return;
-        
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.draggable = true;
-        card.ondragstart = (e) => handleDragStart(e, task.id);
-        card.ondragend = (e) => handleDragEnd(e);
+      // 各ステータス（0〜4）ごとにタスクを取得し、期限日が早い順（昇順）に自動ソート
+      for (let statusIndex = 0; statusIndex <= 4; statusIndex++) {
+        const laneTasks = tasks.filter(t => t.status === statusIndex).sort((a, b) => {
+          if (!a.dueDate && !b.dueDate) return 0;
+          if (!a.dueDate) return 1;
+          if (!b.dueDate) return -1;
+          return a.dueDate.localeCompare(b.dueDate);
+        });
 
-        // カードクリックで拡大表示（ボタン押下時は発火させない）
-        card.onclick = (e) => {
-          if (!e.target.closest('button') && !e.target.closest('input')) {
-            openCardDetail(task.id);
+        counts[statusIndex] = laneTasks.length;
+        const container = document.querySelector(`.lane[data-status="${statusIndex}"] .cards-container`);
+        if (!container) continue;
+
+        laneTasks.forEach(task => {
+          const card = document.createElement('div');
+          const isOverdue = task.status < 4 && task.dueDate && task.dueDate < todayStr;
+
+          card.className = `card ${isOverdue ? 'is-overdue' : ''}`;
+          card.draggable = true;
+          card.ondragstart = (e) => handleDragStart(e, task.id);
+          card.ondragend = (e) => handleDragEnd(e);
+
+          card.onclick = (e) => {
+            if (!e.target.closest('button') && !e.target.closest('input')) {
+              openCardDetail(task.id);
+            }
+          };
+
+          const isChecked = selectedTaskIds.has(task.id);
+          const roundNum = task.round || '1';
+          const typeLabel = task.type || '宿題';
+          const shortSubj = getShortSubject(task.subject);
+          const shortType = getShortType(typeLabel);
+          const displayText = task.text ? task.text : `${task.subject} ${typeLabel}`;
+
+          let deadlineBadgeHtml = '';
+          if (task.dueDate) {
+            const isToday = task.dueDate === todayStr;
+            const badgeClass = isOverdue ? 'overdue' : (isToday ? 'today' : '');
+            const badgeText = isOverdue ? `⚠️ 期限切 ${formatDueDateDisplay(task.dueDate)}` : `📅 ${formatDueDateDisplay(task.dueDate)}`;
+            deadlineBadgeHtml = `<span class="card-deadline-badge ${badgeClass}" title="期限日">${badgeText}</span>`;
           }
-        };
 
-        const isChecked = selectedTaskIds.has(task.id);
-        const roundNum = task.round || '1';
-        const typeLabel = task.type || '宿題';
-
-        card.innerHTML = `
-          <div class="card-top">
-            <div class="card-badge-group">
-              ${(isSelectMode && task.status === 4) ? `
-                <input type="checkbox" class="card-select-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTaskSelection('${task.id}')">
-              ` : ''}
-              <span class="tag tag-${task.subject}">${task.subject}</span>
-              <span class="sub-tag sub-tag-${typeLabel}">${typeLabel}</span>
-              <span class="round-badge round-${roundNum}" title="${roundNum}回目">${roundNum}</span>
+          card.innerHTML = `
+            <div class="card-top">
+              <div class="card-badge-group">
+                ${(isSelectMode && task.status === 4) ? `
+                  <input type="checkbox" class="card-select-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleTaskSelection('${task.id}')">
+                ` : ''}
+                ${deadlineBadgeHtml}
+                <span class="tag tag-${task.subject}">${shortSubj}</span>
+                <span class="sub-tag sub-tag-${typeLabel}">${shortType}</span>
+                <span class="round-badge">${roundNum}回</span>
+              </div>
+              <button class="btn-delete" title="削除（パスワードが必要）" onclick="event.stopPropagation(); requestSingleDelete('${task.id}')">✕</button>
             </div>
-            <button class="btn-delete" title="削除（パスワードが必要）" onclick="event.stopPropagation(); requestSingleDelete('${task.id}')">✕</button>
-          </div>
-          <div class="card-text">${escapeHtml(task.text)}</div>
-          ${task.memo ? `<div class="card-memo">📝 ${escapeHtml(task.memo)}</div>` : ''}
-          <div class="card-actions">
-            ${task.status > 0 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', -1)">◀ 戻す</button>` : ''}
-            ${task.status < 4 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', 1)">進める ▶</button>` : ''}
-          </div>
-        `;
-        container.appendChild(card);
-      });
+            <div class="card-text">${escapeHtml(displayText)}</div>
+            ${task.memo ? `<div class="card-memo">📝 ${escapeHtml(task.memo)}</div>` : ''}
+            <div class="card-actions">
+              ${task.status > 0 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', -1)">◀ 戻す</button>` : ''}
+              ${task.status < 4 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', 1)">進める ▶</button>` : ''}
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
 
       for (let i = 0; i <= 4; i++) {
         const countElem = document.getElementById(`count-${i}`);
         if (countElem) countElem.textContent = counts[i];
       }
 
-      const total = tasks.length;
-      const completed = counts[4];
-      const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
-      document.getElementById('progress-info').textContent = `完了率: ${percent}% (${completed}/${total}件 提出済み)`;
-      document.getElementById('progress-fill').style.width = `${percent}%`;
-
       updateSelectedCountDisplay();
+      renderScheduleCalendar();
+    }
+
+    function renderScheduleCalendar() {
+      const container = document.getElementById('calendarMonthsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const now = new Date();
+      const todayYear = now.getFullYear();
+      const todayMonth = now.getMonth();
+      const todayDay = now.getDate();
+      const todayMidnight = new Date(todayYear, todayMonth, todayDay).getTime();
+
+      const startRange = new Date(todayMidnight - (7 * 86400000));
+      const endRange = new Date(todayMidnight + (30 * 86400000));
+
+      const monthsToRender = [];
+      let cur = new Date(startRange.getFullYear(), startRange.getMonth(), 1);
+      const endMonth = new Date(endRange.getFullYear(), endRange.getMonth(), 1);
+
+      while (cur.getTime() <= endMonth.getTime()) {
+        monthsToRender.push({ year: cur.getFullYear(), month: cur.getMonth() });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+
+      const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+
+      monthsToRender.forEach(({ year, month }) => {
+        const lastDate = new Date(year, month + 1, 0).getDate();
+
+        const validDays = [];
+        for (let d = 1; d <= lastDate; d++) {
+          const cellDate = new Date(year, month, d);
+          const cellTime = cellDate.getTime();
+          if (cellTime >= startRange.getTime() && cellTime <= endRange.getTime()) {
+            validDays.push({ d, cellDate, cellTime });
+          }
+        }
+
+        if (validDays.length === 0) return;
+
+        const monthBlock = document.createElement('div');
+        monthBlock.className = 'month-calendar-block';
+
+        const monthHeading = document.createElement('div');
+        monthHeading.className = 'month-heading';
+        monthHeading.innerHTML = `<span>🗓️ ${year}年 ${month + 1}月</span><span style="font-size:0.75rem; color:#64748b; font-weight:normal;">対象期間のみ表示</span>`;
+        monthBlock.appendChild(monthHeading);
+
+        const grid = document.createElement('div');
+        grid.className = 'calendar-grid';
+
+        validDays.forEach(({ d, cellDate, cellTime }) => {
+          const cell = document.createElement('div');
+          cell.className = 'cal-day-cell';
+
+          const dayOfWeek = cellDate.getDay();
+          const dayName = weekdays[dayOfWeek];
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const holidayName = getJapaneseHoliday(year, month + 1, d);
+
+          const isToday = cellTime === todayMidnight;
+          const isPast = cellTime < todayMidnight;
+
+          if (isToday) {
+            cell.classList.add('is-today');
+          } else if (isPast) {
+            cell.classList.add('is-past');
+          }
+
+          let dayClass = '';
+          if (holidayName) {
+            dayClass = 'holiday';
+          } else if (dayOfWeek === 0) {
+            dayClass = 'sun';
+          } else if (dayOfWeek === 6) {
+            dayClass = 'sat';
+          }
+
+          const top = document.createElement('div');
+          top.className = 'day-cell-top';
+          top.innerHTML = `
+            <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
+              <span class="day-number ${dayClass}">${month + 1}/${d} (${dayName})</span>
+              ${holidayName ? `<span class="holiday-badge">${escapeHtml(holidayName)}</span>` : ''}
+            </div>
+            <span class="day-cell-badge">${isToday ? '今日' : ''}</span>
+          `;
+          cell.appendChild(top);
+
+          // タスク一覧
+          const dayTasks = tasks.filter(t => t.dueDate === dateStr);
+          const tasksListContainer = document.createElement('div');
+          tasksListContainer.className = 'day-tasks-list';
+
+          dayTasks.forEach(task => {
+            const taskItem = document.createElement('div');
+            const isCompleted = task.status === 4;
+            const displayText = task.text ? task.text : `${task.subject} ${task.type}`;
+            const shortSubj = getShortSubject(task.subject);
+            const shortType = getShortType(task.type);
+
+            taskItem.className = `cal-task-item tag-border-${task.subject} ${isCompleted ? 'completed' : ''}`;
+            taskItem.title = `${task.subject} | ${task.type} | ${task.round}回\n${displayText}`;
+            taskItem.onclick = (e) => {
+              e.stopPropagation();
+              openCardDetail(task.id);
+            };
+
+            taskItem.innerHTML = `
+              <div class="cal-task-header-row">
+                <span style="font-size:0.65rem;">${shortSubj}</span>
+                <span>[${shortType}]</span>
+                <span style="font-weight:700; color:#0f172a;">${task.round}回</span>
+                ${isCompleted ? '<span>✓</span>' : ''}
+              </div>
+              <div class="cal-task-text">${escapeHtml(displayText)}</div>
+            `;
+            tasksListContainer.appendChild(taskItem);
+          });
+          cell.appendChild(tasksListContainer);
+
+          // 自由入力イベントスケジュール
+          const dayEvents = events.filter(e => e.date === dateStr);
+          if (dayEvents.length > 0) {
+            const eventsListContainer = document.createElement('div');
+            eventsListContainer.className = 'day-events-list';
+
+            dayEvents.forEach(evt => {
+              const evtItem = document.createElement('div');
+              evtItem.className = 'cal-event-item';
+              
+              const label = evt.detail || 'イベント';
+              evtItem.title = `イベント: ${label}`;
+
+              evtItem.innerHTML = `
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">▫️ ${escapeHtml(label)}</span>
+                <button type="button" class="btn-event-delete" title="削除" onclick="event.stopPropagation(); promptDeleteEvent('${evt.id}')">✕</button>
+              `;
+              eventsListContainer.appendChild(evtItem);
+            });
+
+            cell.appendChild(eventsListContainer);
+          }
+
+          grid.appendChild(cell);
+        });
+
+        monthBlock.appendChild(grid);
+        container.appendChild(monthBlock);
+      });
     }
 
     function escapeHtml(str) {
+      if (!str) return '';
       return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
 
-    /* ----------------------------------------------------
-       設定モーダル & 共有モーダル
-    ---------------------------------------------------- */
     function openSettingsModal() {
-      document.getElementById('currentPassInput').value = '';
-      document.getElementById('newPassInput').value = '';
-      document.getElementById('newPassConfirmInput').value = '';
-      document.getElementById('roomInput').value = window.currentRoomId;
-      document.getElementById('settingsModal').classList.add('active');
+      const curInput = document.getElementById('currentPassInput');
+      const newPass = document.getElementById('newPassInput');
+      const newConfirm = document.getElementById('newPassConfirmInput');
+      const roomIn = document.getElementById('roomInput');
+      const customConfigIn = document.getElementById('customFirebaseConfigInput');
+
+      if (curInput) curInput.value = '';
+      if (newPass) newPass.value = '';
+      if (newConfirm) newConfirm.value = '';
+      if (roomIn) roomIn.value = window.currentRoomId;
+      if (customConfigIn) {
+        customConfigIn.value = localStorage.getItem('kanban_custom_firebase_config') || '';
+      }
+
+      const modal = document.getElementById('settingsModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function saveCustomFirebaseConfig() {
+      const input = document.getElementById('customFirebaseConfigInput');
+      const val = input ? input.value.trim() : '';
+
+      if (!val) {
+        showToast('⚠️ Firebase設定(JSON)を入力してください');
+        return;
+      }
+
+      try {
+        JSON.parse(val);
+        localStorage.setItem('kanban_custom_firebase_config', val);
+        showToast('🌐 クラウド設定を保存しました。再接続します...');
+        closeModal('settingsModal');
+        if (window.reinitCloudSync) window.reinitCloudSync();
+      } catch (e) {
+        showToast('❌ JSONの形式が正しくありません');
+      }
+    }
+
+    function clearCustomFirebaseConfig() {
+      localStorage.removeItem('kanban_custom_firebase_config');
+      const input = document.getElementById('customFirebaseConfigInput');
+      if (input) input.value = '';
+      showToast('📦 ローカル保存モードに戻しました');
+      closeModal('settingsModal');
+      if (window.reinitCloudSync) window.reinitCloudSync();
     }
 
     function changePassword() {
@@ -1685,20 +3170,24 @@
       const currentUrl = window.location.origin + window.location.pathname;
       const shareUrl = `${currentUrl}#room=${encodeURIComponent(window.currentRoomId)}`;
 
-      document.getElementById('shareUrlInput').value = shareUrl;
+      const shareInput = document.getElementById('shareUrlInput');
+      if (shareInput) shareInput.value = shareUrl;
 
       const qrContainer = document.getElementById('qrcode');
-      qrContainer.innerHTML = '';
-      new QRCode(qrContainer, {
-        text: shareUrl,
-        width: 170,
-        height: 170,
-        colorDark: "#005fb2",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      if (qrContainer) {
+        qrContainer.innerHTML = '';
+        new QRCode(qrContainer, {
+          text: shareUrl,
+          width: 170,
+          height: 170,
+          colorDark: "#005fb2",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      }
 
-      document.getElementById('syncModal').classList.add('active');
+      const modal = document.getElementById('syncModal');
+      if (modal) modal.classList.add('active');
     }
 
     function closeModal(modalId) {
@@ -1714,9 +3203,11 @@
 
     function copyShareUrl() {
       const input = document.getElementById('shareUrlInput');
-      input.select();
-      document.execCommand('copy');
-      showToast('📋 共有URLをコピーしました！');
+      if (input) {
+        input.select();
+        document.execCommand('copy');
+        showToast('📋 共有URLをコピーしました！');
+      }
     }
 
     function triggerPrint() {
@@ -1724,9 +3215,9 @@
       window.print();
     }
 
-    // 紙吹雪エフェクト
     function launchConfetti() {
       const canvas = document.getElementById('confetti-canvas');
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -1734,7 +3225,7 @@
       const particles = [];
       const colors = ['#0070d2', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'];
 
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 65; i++) {
         particles.push({
           x: canvas.width / 2,
           y: canvas.height / 2,
