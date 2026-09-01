@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>景悟のやること表 | リアルタイム学習進捗ボード</title>
+  <title>景悟のやること表 | 学習進捗ボード</title>
   
+  <!-- QRコード生成ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
@@ -28,11 +29,6 @@
       --tag-science: #16a34a;
       --tag-social: #ea580c;
       --tag-other: #475569;
-
-      /* サブ種別カラー */
-      --type-homework: #0284c7;
-      --type-retest: #7c3aed;
-      --type-normal: #64748b;
     }
 
     * {
@@ -61,6 +57,7 @@
       z-index: 9999;
     }
 
+    /* 通知トースト */
     #toast {
       position: fixed;
       bottom: 24px;
@@ -77,14 +74,10 @@
       transform: translateY(20px);
       transition: all 0.3s ease;
       pointer-events: none;
-      max-width: 90vw;
     }
     #toast.show {
       opacity: 1;
       transform: translateY(0);
-    }
-    #toast.toast-error {
-      background: #dc2626;
     }
 
     /* ヘッダー */
@@ -103,7 +96,7 @@
     }
 
     .header-title h1 {
-      font-size: 1.35rem;
+      font-size: 1.4rem;
       color: var(--primary-dark);
       display: flex;
       align-items: center;
@@ -184,16 +177,6 @@
       background: #075985;
     }
 
-    .btn-gdrive {
-      background: #ffffff;
-      color: #0f172a;
-      border-color: #cbd5e1;
-    }
-    .btn-gdrive:hover {
-      background: #f8fafc;
-      border-color: #94a3b8;
-    }
-
     .btn-print {
       background: #0ea5e9;
       color: white;
@@ -259,60 +242,119 @@
     /* タスク入力フォーム */
     .form-container {
       background: #ffffff;
-      padding: 14px 18px;
+      padding: 16px 20px;
       border-radius: 12px;
       margin-bottom: 14px;
       box-shadow: 0 4px 16px rgba(0, 112, 210, 0.06);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-button-selectors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    .selector-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .selector-label {
+      font-size: 0.8rem;
+      font-weight: bold;
+      color: var(--text-sub);
+      min-width: 32px;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 8px;
+      gap: 3px;
+    }
+
+    .choice-btn {
+      background: transparent;
+      border: none;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #64748b;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .choice-btn:hover {
+      color: #0f172a;
+    }
+
+    .choice-btn.active {
+      background: #ffffff;
+      color: var(--primary-dark);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+      font-weight: 700;
+    }
+
+    /* 教科ボタンのアクティブ色 */
+    .choice-btn.active[data-val="算数"] { color: var(--tag-math); }
+    .choice-btn.active[data-val="国語"] { color: var(--tag-japanese); }
+    .choice-btn.active[data-val="理科"] { color: var(--tag-science); }
+    .choice-btn.active[data-val="社会"] { color: var(--tag-social); }
+    .choice-btn.active[data-val="その他"] { color: var(--tag-other); }
+
+    .choice-btn.active[data-val="宿題"] { color: #0284c7; }
+    .choice-btn.active[data-val="テスト直し"] { color: #7c3aed; }
+    .choice-btn.active[data-val="通常"] { color: #475569; }
+
+    .form-inputs-row {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
 
-    .form-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .form-item label {
-      font-size: 0.72rem;
-      font-weight: bold;
-      color: var(--text-sub);
-    }
-
-    select, input[type="text"], input[type="password"] {
-      padding: 9px 12px;
+    input[type="text"], input[type="password"] {
+      padding: 10px 14px;
       border: 1.5px solid var(--border-color);
       border-radius: 8px;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
       background: #ffffff;
     }
 
-    select:focus, input[type="text"]:focus, input[type="password"]:focus {
+    input[type="text"]:focus, input[type="password"]:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(0, 112, 210, 0.15);
     }
 
-    #taskInput { flex: 2; min-width: 200px; }
-    #memoInput { flex: 1; min-width: 140px; }
+    #taskInput { flex: 2; min-width: 220px; }
+    #memoInput { flex: 1; min-width: 150px; }
 
     .btn-add {
       background: var(--primary);
       color: white;
       border: none;
-      padding: 10px 20px;
-      font-size: 0.9rem;
+      padding: 10px 22px;
+      font-size: 0.92rem;
       font-weight: bold;
       border-radius: 8px;
       cursor: pointer;
-      align-self: flex-end;
-      height: 40px;
     }
     .btn-add:hover { background: var(--primary-dark); }
 
+    /* 一括操作バー */
     .batch-actions-bar {
       background: #fef2f2;
       border: 1px solid #fecaca;
@@ -424,13 +466,13 @@
       padding: 12px;
       box-shadow: 0 2px 6px rgba(0, 40, 100, 0.06);
       border: 1px solid rgba(216, 229, 242, 0.9);
-      cursor: grab;
+      cursor: pointer;
       transition: transform 0.15s, box-shadow 0.15s;
       position: relative;
     }
 
     .card:hover {
-      box-shadow: 0 4px 14px rgba(0, 112, 210, 0.15);
+      box-shadow: 0 6px 16px rgba(0, 112, 210, 0.18);
       transform: translateY(-2px);
     }
 
@@ -571,6 +613,7 @@
       color: white;
     }
 
+    /* モーダル共通スタイル */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -594,8 +637,7 @@
       width: 100%;
       max-width: 480px;
       max-height: 90vh;
-      display: flex;
-      flex-direction: column;
+      overflow-y: auto;
       padding: 22px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
       animation: modalIn 0.2s ease;
@@ -612,7 +654,6 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 14px;
-      flex-shrink: 0;
     }
 
     .modal-header h2 {
@@ -626,34 +667,99 @@
     .btn-close-modal {
       background: none;
       border: none;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       color: #64748b;
       cursor: pointer;
+      padding: 4px;
+      line-height: 1;
+      border-radius: 6px;
+    }
+    .btn-close-modal:hover {
+      color: #0f172a;
+      background: #f1f5f9;
     }
 
     .modal-body {
       font-size: 0.88rem;
       color: #334155;
       line-height: 1.6;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      flex: 1;
-      padding-right: 6px;
     }
 
-    .modal-body::-webkit-scrollbar {
-      width: 6px;
+    /* カード拡大詳細モーダル専用 */
+    .detail-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
     }
-    .modal-body::-webkit-scrollbar-track {
+
+    .detail-tag {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .detail-subtag {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .detail-round {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 800;
+      border-radius: 50%;
+    }
+
+    .detail-card-text {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.5;
+      margin-bottom: 14px;
+      padding: 14px;
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      word-break: break-word;
+    }
+
+    .detail-memo-box {
+      font-size: 0.95rem;
+      color: #334155;
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    .detail-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       background: #f1f5f9;
-      border-radius: 4px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 16px;
     }
-    .modal-body::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    .modal-body::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
+
+    .detail-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 14px;
     }
 
     .form-row {
@@ -694,12 +800,26 @@
     }
     .share-url-box input { flex: 1; font-size: 0.8rem; background: #f8fafc; }
 
+    /* 印刷用スタイル */
     .print-only { display: none; }
     @media print {
-      @page { size: A4 landscape; margin: 8mm; }
-      body { background: #ffffff !important; padding: 0 !important; }
-      header, .form-container, .batch-actions-bar, .btn, .btn-delete, .card-actions, .card-select-checkbox, #confetti-canvas, #toast { display: none !important; }
-      .print-only { display: block !important; }
+      @page {
+        size: A4 landscape;
+        margin: 8mm;
+      }
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        color: #000000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      header, .form-container, .batch-actions-bar, .btn, .btn-delete, .card-actions, .card-select-checkbox, .modal-overlay, #confetti-canvas, #toast {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
       .print-header {
         border-bottom: 2px solid #0070d2;
         padding-bottom: 6px;
@@ -712,17 +832,24 @@
         display: grid !important;
         grid-template-columns: repeat(5, 1fr) !important;
         gap: 6px !important;
+        overflow: visible !important;
       }
       .lane {
         background: #f8fafc !important;
         border: 1px solid #94a3b8 !important;
         min-height: 420px !important;
         padding: 6px !important;
+        page-break-inside: avoid;
       }
       .card {
         border: 1px solid #cbd5e1 !important;
         box-shadow: none !important;
         padding: 6px 8px !important;
+        page-break-inside: avoid;
+        cursor: default !important;
+      }
+      .card:hover {
+        transform: none !important;
       }
       .print-footer {
         margin-top: 12px;
@@ -741,11 +868,13 @@
   <canvas id="confetti-canvas"></canvas>
   <div id="toast"></div>
 
+  <!-- 印刷用ヘッダー -->
   <div class="print-only print-header">
     <div><h1 style="font-size:1.3rem; color:#005fb2;">📘 景悟のやること表（学習進捗レポート）</h1></div>
-    <div style="font-size: 0.85rem;">日付: <strong id="print-date"></strong> ｜ なまえ: <strong>景悟</strong></div>
+    <div style="font-size: 0.85rem;">日付: <strong id="print-date"></strong> ｜ なまえ: _________________</div>
   </div>
 
+  <!-- 操作ヘッダー -->
   <header>
     <div class="header-title">
       <h1>📚 景悟のやること表</h1>
@@ -759,24 +888,24 @@
     </div>
 
     <div class="header-actions">
+      <!-- 家族リンク共有 -->
       <button class="btn btn-sync" onclick="openSyncModal()">
         📲 家族にリンクを送る
       </button>
 
-      <button class="btn btn-primary" style="background:#0284c7;" onclick="executeAndSave()">
-        💾 実行・保存
-      </button>
-
+      <!-- 印刷 -->
       <button class="btn btn-print" onclick="triggerPrint()">
         🖨️ 印刷
       </button>
 
+      <!-- 設定（パスワード変更・合言葉） -->
       <button class="btn btn-settings" onclick="openSettingsModal()" title="設定">
         ⚙️ 設定
       </button>
     </div>
   </header>
 
+  <!-- 進捗率 -->
   <div class="progress-section">
     <div class="progress-info" id="progress-info">完了率: 0%</div>
     <div class="progress-bar-wrapper">
@@ -784,6 +913,7 @@
     </div>
   </div>
 
+  <!-- 選択削除用のアクションバー -->
   <div class="batch-actions-bar" id="batchActionBar">
     <div style="display:flex; align-items:center; gap:8px;">
       <span style="font-size:0.88rem; font-weight:bold; color:var(--danger-dark);">🧹 完了タスクの削除モード:</span>
@@ -797,49 +927,52 @@
     </div>
   </div>
 
+  <!-- タスク追加フォーム（ボタン選択式UI） -->
   <div class="form-container">
-    <div class="form-item">
-      <label for="subjectSelect">教科</label>
-      <select id="subjectSelect">
-        <option value="算数">算数</option>
-        <option value="国語">国語</option>
-        <option value="理科">理科</option>
-        <option value="社会">社会</option>
-        <option value="その他">その他</option>
-      </select>
+    <!-- 教科・種別・回数 ボタングループ -->
+    <div class="form-button-selectors">
+      <!-- 教科 -->
+      <div class="selector-group">
+        <span class="selector-label">教科:</span>
+        <div class="btn-group" id="subjectGroup">
+          <button type="button" class="choice-btn active" data-val="算数" onclick="setChoice('subject', '算数')">算数</button>
+          <button type="button" class="choice-btn" data-val="国語" onclick="setChoice('subject', '国語')">国語</button>
+          <button type="button" class="choice-btn" data-val="理科" onclick="setChoice('subject', '理科')">理科</button>
+          <button type="button" class="choice-btn" data-val="社会" onclick="setChoice('subject', '社会')">社会</button>
+          <button type="button" class="choice-btn" data-val="その他" onclick="setChoice('subject', 'その他')">その他</button>
+        </div>
+      </div>
+
+      <!-- 種別 -->
+      <div class="selector-group">
+        <span class="selector-label">種別:</span>
+        <div class="btn-group" id="typeGroup">
+          <button type="button" class="choice-btn active" data-val="宿題" onclick="setChoice('type', '宿題')">宿題</button>
+          <button type="button" class="choice-btn" data-val="テスト直し" onclick="setChoice('type', 'テスト直し')">テスト直し</button>
+          <button type="button" class="choice-btn" data-val="通常" onclick="setChoice('type', '通常')">通常</button>
+        </div>
+      </div>
+
+      <!-- 回数 -->
+      <div class="selector-group">
+        <span class="selector-label">回数:</span>
+        <div class="btn-group" id="roundGroup">
+          <button type="button" class="choice-btn active" data-val="1" onclick="setChoice('round', '1')">1</button>
+          <button type="button" class="choice-btn" data-val="2" onclick="setChoice('round', '2')">2</button>
+          <button type="button" class="choice-btn" data-val="3" onclick="setChoice('round', '3')">3</button>
+        </div>
+      </div>
     </div>
 
-    <div class="form-item">
-      <label for="typeSelect">種別</label>
-      <select id="typeSelect">
-        <option value="宿題">宿題</option>
-        <option value="テスト直し">テスト直し</option>
-        <option value="通常">通常</option>
-      </select>
+    <!-- 入力欄 & 追加ボタン -->
+    <div class="form-inputs-row">
+      <input type="text" id="taskInput" placeholder="やる内容を入力（例: テキスト p.30〜33）" onkeydown="if(event.key==='Enter') addTask()">
+      <input type="text" id="memoInput" placeholder="メモ・目標（任意）" onkeydown="if(event.key==='Enter') addTask()">
+      <button class="btn-add" onclick="addTask()">＋ 追加</button>
     </div>
-
-    <div class="form-item">
-      <label for="roundSelect">回数</label>
-      <select id="roundSelect">
-        <option value="1" selected>1回目</option>
-        <option value="2">2回目</option>
-        <option value="3">3回目</option>
-      </select>
-    </div>
-
-    <div class="form-item" style="flex:2; min-width:200px;">
-      <label for="taskInput">やる内容</label>
-      <input type="text" id="taskInput" placeholder="例: テキスト p.30〜33" onkeydown="if(event.key==='Enter') addTask()">
-    </div>
-
-    <div class="form-item" style="flex:1; min-width:140px;">
-      <label for="memoInput">メモ・目標（任意）</label>
-      <input type="text" id="memoInput" placeholder="例: 目標20分" onkeydown="if(event.key==='Enter') addTask()">
-    </div>
-    
-    <button class="btn-add" onclick="addTask()">＋ 追加</button>
   </div>
 
+  <!-- 5つのカンバンレーン -->
   <div class="kanban-board">
     <div class="lane" data-status="0">
       <div class="lane-header">
@@ -873,6 +1006,7 @@
       <div class="cards-container" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 3)"></div>
     </div>
 
+    <!-- 5. 提出済み -->
     <div class="lane" data-status="4">
       <div class="lane-header">
         <span class="lane-title">✨ 5. 提出済み</span>
@@ -885,189 +1019,50 @@
     </div>
   </div>
 
+  <!-- 印刷用フッター -->
   <div class="print-only print-footer">
     <div><strong>お母さん・先生からのコメント：</strong><div style="height:32px; border-bottom:1px dotted #cbd5e1;"></div></div>
     <div style="border:1px dashed #94a3b8; display:flex; align-items:center; justify-content:center; font-size:0.75rem; color:#64748b;">チェック印 / サイン</div>
   </div>
 
-  <div class="modal-overlay" id="syncModal" onclick="handleOverlayClick(event, 'syncModal')">
+  <!-- モーダル1: カード拡大詳細モーダル -->
+  <div class="modal-overlay" id="cardDetailModal" onclick="closeModalOnOverlay(event, 'cardDetailModal')">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>🔍 やることの詳細</h2>
+        <button class="btn-close-modal" onclick="closeModal('cardDetailModal')">✕</button>
+      </div>
+      <div class="modal-body" id="cardDetailContent">
+        <!-- JSで動的生成 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル2: 家族リンク共有QR -->
+  <div class="modal-overlay" id="syncModal" onclick="closeModalOnOverlay(event, 'syncModal')">
     <div class="modal">
       <div class="modal-header">
         <h2>📲 家族にリンクを送る</h2>
         <button class="btn-close-modal" onclick="closeModal('syncModal')">✕</button>
       </div>
       <div class="modal-body">
-        <div id="localFileWarning" style="display:none; background:#fffbeb; border:1px solid #fef3c7; border-left:4px solid #f59e0b; padding:10px 12px; border-radius:6px; font-size:0.8rem; color:#92400e; margin-bottom:12px; line-height:1.5;">
-          ⚠️ <strong>パソコン内のファイル（file://）で開いています</strong><br>
-          スマホのカメラでPC内を直接開くことはできません。お子さんのiPadでもこのHTMLファイルを開き、以下の<strong>合言葉</strong>を入力してください。
-        </div>
-
-        <p id="qrGuideText" style="font-size:0.86rem; color:#334155; margin-bottom:8px;">
-          iPadやスマホのカメラで以下のQRコードを読み取ると、リアルタイムに連動したボードを家族で共有できます。
-        </p>
+        <p>お子さんのiPadのカメラで以下のQRコードを読み取ると、このボードと<strong>リアルタイム連動</strong>して開きます。</p>
         
         <div class="qr-container">
-          <div id="qrcode" style="min-height:170px; display:flex; align-items:center; justify-content:center;"></div>
+          <div id="qrcode"></div>
         </div>
 
-        <div style="background:#f0f7ff; border:1px solid #bae6fd; border-radius:8px; padding:10px 12px; margin-top:10px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-            <span style="font-size:0.82rem; font-weight:bold; color:var(--primary-dark);">🏠 現在の合言葉（ファミリーID）:</span>
-            <button class="btn btn-primary" style="padding:3px 8px; font-size:0.75rem;" onclick="copyRoomId()">合言葉をコピー</button>
-          </div>
-          <div id="modalRoomIdDisplay" style="font-size:1.05rem; font-weight:800; color:var(--primary); font-family:monospace; letter-spacing:1px;">
-            tanaka-family
-          </div>
-        </div>
-
-        <div style="font-size:0.8rem; color:var(--text-sub); margin-top:12px; margin-bottom:4px;">共有URL（LINEやメッセージで送る場合）:</div>
+        <div style="font-size:0.8rem; color:var(--text-sub); margin-bottom: 4px;">共有URL（LINEやメッセージで送る場合）:</div>
         <div class="share-url-box">
           <input type="text" id="shareUrlInput" readonly>
-          <button class="btn btn-primary" onclick="copyShareUrl()">URLコピー</button>
+          <button class="btn btn-primary" onclick="copyShareUrl()">コピー</button>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="modal-overlay" id="settingsModal" onclick="handleOverlayClick(event, 'settingsModal')">
-    <div class="modal">
-      <div class="modal-header">
-        <h2>⚙️ 設定画面</h2>
-        <button class="btn-close-modal" onclick="closeModal('settingsModal')">✕</button>
-      </div>
-      <div class="modal-body">
-        
-        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
-          📁 Googleドライブ保存先の設定
-        </h3>
-        <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:8px;">
-          「実行・保存」ボタンで保存される専用Googleドライブフォルダです。
-        </p>
-        <div style="background:#f0f7ff; border:1px solid #bae6fd; border-radius:8px; padding:12px; margin-bottom:14px;">
-          <div style="font-size:0.82rem; margin-bottom:8px;">
-            <strong>🔗 連携フォルダー:</strong><br>
-            <span style="color:#0284c7; font-weight:600; word-break:break-all;" id="gdriveFolderDisplay">
-              景悟のやること表 保存用フォルダ
-            </span>
-          </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-            <a id="gdriveFolderLink" href="https://drive.google.com/drive/folders/1gdGnRtLAZ-P40Ml0Steu7GwegS6w5q-x?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="padding:6px 12px; font-size:0.78rem; text-decoration:none; background:#0284c7;">
-              📂 指定のGoogleドライブを開く
-            </a>
-            <button class="btn btn-gdrive" style="padding:6px 10px; font-size:0.78rem;" onclick="copyGdriveFolderUrl()">
-              🔗 リンクをコピー
-            </button>
-          </div>
-
-          <div style="border-top:1px dashed #bae6fd; padding-top:10px; margin-top:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <label style="font-size:0.8rem; font-weight:bold; color:var(--primary-dark);">⚡ 完全自動・直接保存URL（GAS）:</label>
-              <button class="btn" style="background:none; border:none; color:var(--primary); font-size:0.75rem; text-decoration:underline; cursor:pointer;" onclick="toggleGasGuide()">
-                📖 設定手順を見る
-              </button>
-            </div>
-            <input type="text" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" style="font-size:0.8rem; width:100%; margin-bottom:6px;">
-            <div style="text-align:right;">
-              <button class="btn btn-primary" style="padding:4px 10px; font-size:0.75rem;" onclick="saveGasUrl()">直接保存URLを保存</button>
-            </div>
-            
-            <div id="gasGuideBox" style="display:none; background:#ffffff; border:1px solid #cbd5e1; border-radius:6px; padding:10px; margin-top:8px; font-size:0.75rem; line-height:1.5; color:#334155;">
-              <strong>🛠️ 1回だけ行う直接保存の設定手順:</strong>
-              <ol style="padding-left:18px; margin:4px 0 8px 0;">
-                <li><a href="https://script.google.com/home/start" target="_blank" style="color:var(--primary); font-weight:bold;">Google Apps Script</a> を開き「新しいプロジェクト」をクリック</li>
-                <li>表示されたコード欄に下の「コピー用コード」を貼り付け</li>
-                <li>右上の「デプロイ」→「新しいデプロイ」→ 種類で「ウェブアプリ」を選択</li>
-                <li>「アクセスできるユーザー」を「<strong>全員</strong>」にしてデプロイ</li>
-                <li>発行された「ウェブアプリのURL」を上の入力欄に貼り付けて保存！</li>
-              </ol>
-              <button class="btn btn-secondary" style="padding:4px 8px; font-size:0.72rem; width:100%; justify-content:center;" onclick="copyGasScript()">
-                📋 コピー用GASコードをコピー
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
-          📂 バックアップデータの復元
-        </h3>
-        <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:8px;">
-          Googleドライブからダウンロードしたファイル（<code>学習進捗_最新バックアップ.json</code>）を選択して元通り復元します。
-        </p>
-        <div style="margin-bottom:16px;">
-          <button class="btn btn-gdrive" style="width:100%; justify-content:center; padding:9px;" onclick="document.getElementById('fileInput').click()">
-            📂 Googleドライブのファイルを選択して復元
-          </button>
-          <input type="file" id="fileInput" style="display:none;" accept=".json" onchange="importDataFromFile(event)">
-        </div>
-
-        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
-          🔐 保護者パスワードの変更
-        </h3>
-        <div class="form-row">
-          <label>現在のパスワード:</label>
-          <input type="password" id="currentPassInput" placeholder="初期値: 1234">
-        </div>
-        <div class="form-row">
-          <label>新しいパスワード:</label>
-          <input type="password" id="newPassInput" placeholder="新しいパスワード（4文字以上推奨）">
-        </div>
-        <div class="form-row">
-          <label>新しいパスワード（確認）:</label>
-          <input type="password" id="newPassConfirmInput" placeholder="もう一度入力">
-        </div>
-        <div style="text-align:right; margin-bottom:16px;">
-          <button class="btn btn-primary" onclick="changePassword()">パスワードを更新</button>
-        </div>
-
-        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
-          🏠 ファミリー合言葉（リアルタイム連動）
-        </h3>
-        <p style="font-size:0.8rem; color:var(--text-sub); margin-bottom:8px;">
-          親とお子さんのiPadで同じ合言葉を設定すると、画面がリアルタイムに連動します。
-        </p>
-        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-bottom:10px;">
-          <div style="font-size:0.8rem; color:#475569; margin-bottom:2px;">現在の合言葉:</div>
-          <div style="font-size:1rem; font-weight:bold; color:var(--primary-dark); font-family:monospace;" id="currentRoomDisplay">
-            tanaka-family
-          </div>
-        </div>
-        <div class="form-row">
-          <label>新しい合言葉に変更:</label>
-          <input type="text" id="roomInput" placeholder="例: tanaka-family">
-        </div>
-        <div style="text-align:right;">
-          <button class="btn btn-primary" onclick="saveRoomFromSettings()">合言葉を変更して接続</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="saveSuccessModal" onclick="handleOverlayClick(event, 'saveSuccessModal')">
-    <div class="modal" style="max-width: 440px;">
-      <div style="text-align: center; margin-bottom: 12px;">
-        <div style="font-size: 2rem;">📥</div>
-        <h2 style="font-size: 1.15rem; color: var(--primary-dark); margin-top: 4px;">
-          最新ファイルを端末に書き出しました！
-        </h2>
-      </div>
-
-      <div style="background: #f0f7ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 0.83rem; line-height: 1.6; color: #1e3a8a;">
-        <strong>📌 あと1ステップでドライブ保存完了です：</strong><br>
-        ダウンロードされた <code>学習進捗_最新バックアップ.json</code> を、以下のボタンから開くGoogleドライブへ<strong>ドラッグ＆ドロップ</strong>（または「＋新規」からアップロード）してください。
-      </div>
-
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="btn btn-settings" onclick="closeModal('saveSuccessModal')">
-          閉じる
-        </button>
-        <a href="https://drive.google.com/drive/folders/1gdGnRtLAZ-P40Ml0Steu7GwegS6w5q-x?usp=sharing" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="background:#0284c7; text-decoration:none;" onclick="closeModal('saveSuccessModal')">
-          📂 Googleドライブを開いて保存
-        </a>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="passwordModal" onclick="handleOverlayClick(event, 'passwordModal')">
+  <!-- モーダル3: パスワード確認モーダル（削除時） -->
+  <div class="modal-overlay" id="passwordModal" onclick="closeModalOnOverlay(event, 'passwordModal')">
     <div class="modal" style="max-width: 380px;">
       <div class="modal-header">
         <h2 style="color:var(--danger-dark);">🔒 削除パスワード認証</h2>
@@ -1088,9 +1083,51 @@
     </div>
   </div>
 
+  <!-- モーダル4: 設定画面（パスワード変更・合言葉設定） -->
+  <div class="modal-overlay" id="settingsModal" onclick="closeModalOnOverlay(event, 'settingsModal')">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>⚙️ 設定</h2>
+        <button class="btn-close-modal" onclick="closeModal('settingsModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          🏠 ファミリー合言葉（リアルタイム連動）
+        </h3>
+        <div class="form-row">
+          <label>現在の合言葉:</label>
+          <input type="text" id="roomInput">
+        </div>
+        <div style="text-align:right; margin-bottom:18px;">
+          <button class="btn btn-primary" onclick="saveRoomFromSettings()">合言葉を変更して接続</button>
+        </div>
+
+        <h3 style="font-size:0.95rem; color:var(--primary-dark); margin-bottom:8px; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+          🔐 保護者パスワードの変更
+        </h3>
+        <div class="form-row">
+          <label>現在のパスワード:</label>
+          <input type="password" id="currentPassInput" placeholder="初期値: 1234">
+        </div>
+        <div class="form-row">
+          <label>新しいパスワード:</label>
+          <input type="password" id="newPassInput" placeholder="新しいパスワード">
+        </div>
+        <div class="form-row">
+          <label>新しいパスワード（確認）:</label>
+          <input type="password" id="newPassConfirmInput" placeholder="もう一度入力">
+        </div>
+        <div style="text-align:right;">
+          <button class="btn btn-primary" onclick="changePassword()">パスワードを更新</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (リアルタイム通信) -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
     import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
     let db = null;
@@ -1098,28 +1135,14 @@
     let currentUser = null;
     let unsubscribeSync = null;
 
-    // 発行された設定情報
-    const firebaseConfig = {
-      apiKey: "AIzaSyBsHC08SEyU5m6uaVqXB_dIbvvUPnp5Aik",
-      authDomain: "keigo-s-study-progress-tracker.firebaseapp.com",
-      projectId: "keigo-s-study-progress-tracker",
-      storageBucket: "keigo-s-study-progress-tracker.firebasestorage.app",
-      messagingSenderId: "268317449138",
-      appId: "1:268317449138:web:c77f859d8cf9db520322ab",
-      measurementId: "G-T5NMYSY3ML"
-    };
-
-    window.currentRoomId = window.currentRoomId || 'tanaka-family';
-
-    // Firestoreへの保存処理
     window.dbSaveTasks = async function(tasksToSave) {
-      const room = window.currentRoomId || 'tanaka-family';
       if (!db || !currentUser) {
-        localStorage.setItem(`kanban_tasks_${room}`, JSON.stringify(tasksToSave));
+        localStorage.setItem(`kanban_tasks_${window.currentRoomId}`, JSON.stringify(tasksToSave));
         return;
       }
       try {
-        const docRef = doc(db, 'study_rooms', room);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', window.currentRoomId);
         await setDoc(docRef, {
           tasks: tasksToSave,
           updatedAt: Date.now()
@@ -1130,15 +1153,11 @@
     };
 
     window.switchRoom = function(newRoomId) {
-      if (!newRoomId) return;
+      if (!newRoomId || newRoomId === window.currentRoomId) return;
       window.currentRoomId = newRoomId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
       localStorage.setItem('kanban_last_room_id', window.currentRoomId);
-      const displayElem = document.getElementById('currentRoomDisplay');
-      if (displayElem) displayElem.textContent = window.currentRoomId;
       setupRealtimeListener();
-      if (typeof window.showToast === 'function') {
-        window.showToast(`🏠 合言葉「${window.currentRoomId}」に接続しました`);
-      }
+      window.showToast(`🏠 合言葉「${window.currentRoomId}」に接続しました`);
     };
 
     async function initCloudSync() {
@@ -1150,30 +1169,36 @@
         const savedRoom = localStorage.getItem('kanban_last_room_id');
         if (savedRoom) window.currentRoomId = savedRoom;
       }
-      const displayElem = document.getElementById('currentRoomDisplay');
-      if (displayElem) displayElem.textContent = window.currentRoomId;
+
+      if (typeof __firebase_config === 'undefined') {
+        document.getElementById('syncStatusText').textContent = 'ローカル保存モード';
+        window.loadLocalTasks();
+        return;
+      }
 
       try {
+        const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
 
-        // 匿名認証で接続
-        await signInAnonymously(auth);
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
 
         onAuthStateChanged(auth, (user) => {
           currentUser = user;
           if (user) {
-            const syncText = document.getElementById('syncStatusText');
-            if (syncText) syncText.textContent = 'リアルタイム同期中';
+            document.getElementById('syncStatusText').textContent = 'リアルタイム同期中';
             setupRealtimeListener();
           }
         });
       } catch (e) {
         console.error("Cloud init fallback:", e);
-        const syncText = document.getElementById('syncStatusText');
-        if (syncText) syncText.textContent = 'オフライン保存モード';
-        if (typeof window.loadLocalTasks === 'function') window.loadLocalTasks();
+        document.getElementById('syncStatusText').textContent = 'オフライン保存モード';
+        window.loadLocalTasks();
       }
     }
 
@@ -1181,17 +1206,17 @@
       if (!db || !currentUser) return;
       if (unsubscribeSync) unsubscribeSync();
 
-      const room = window.currentRoomId || 'tanaka-family';
-      const docRef = doc(db, 'study_rooms', room);
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'study_rooms', window.currentRoomId);
 
       unsubscribeSync = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data && Array.isArray(data.tasks) && typeof window.setTasksFromCloud === 'function') {
+          if (data && Array.isArray(data.tasks)) {
             window.setTasksFromCloud(data.tasks);
           }
         } else {
-          if (typeof window.initDefaultTasks === 'function') window.initDefaultTasks();
+          window.initDefaultTasks();
         }
       }, (error) => {
         console.error("Sync listener error:", error);
@@ -1201,41 +1226,59 @@
     window.addEventListener('DOMContentLoaded', initCloudSync);
   </script>
 
+  <!-- アプリ本体ロジック -->
   <script>
-    window.currentRoomId = localStorage.getItem('kanban_last_room_id') || 'tanaka-family';
     const DEFAULT_PASS = '1234';
     const PASS_KEY = 'kanban_admin_password';
-    const GAS_URL_KEY = 'kanban_gas_webhook_url';
-    const DEFAULT_GAS_URL = '';
-    const GDRIVE_FOLDER_URL = 'https://drive.google.com/drive/folders/1gdGnRtLAZ-P40Ml0Steu7GwegS6w5q-x?usp=sharing';
+    window.currentRoomId = 'keigo-study-room';
+
     let tasks = [];
     let isSelectMode = false;
     let selectedTaskIds = new Set();
     let pendingAction = null;
-    let configuredFileHandle = null;
+
+    // 現在選択されているフォームのボタングループ値
+    let selectedFormValues = {
+      subject: '算数',
+      type: '宿題',
+      round: '1'
+    };
+
+    const STATUS_NAMES = [
+      '⏳ 1. 未だ',
+      '✏️ 2. している最中',
+      '🎯 3. 終わり',
+      '👀 4. お母さんチェック中',
+      '✨ 5. 提出済み'
+    ];
 
     window.onload = () => {
       updatePrintDate();
-      const savedGas = localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
-      const gasInput = document.getElementById('gasUrlInput');
-      if (savedGas && gasInput) gasInput.value = savedGas;
     };
+
+    function setChoice(category, value) {
+      selectedFormValues[category] = value;
+      const groupElem = document.getElementById(`${category}Group`);
+      if (groupElem) {
+        groupElem.querySelectorAll('.choice-btn').forEach(btn => {
+          if (btn.getAttribute('data-val') === value) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+    }
 
     function getAdminPassword() {
       return localStorage.getItem(PASS_KEY) || DEFAULT_PASS;
     }
 
-    function showToast(message, isError = false) {
+    function showToast(message) {
       const toast = document.getElementById('toast');
-      if (!toast) return;
       toast.textContent = message;
-      if (isError) {
-        toast.classList.add('toast-error');
-      } else {
-        toast.classList.remove('toast-error');
-      }
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2600);
+      setTimeout(() => toast.classList.remove('show'), 2400);
     }
 
     function updatePrintDate() {
@@ -1251,14 +1294,9 @@
     }
 
     function loadLocalTasks() {
-      const saved = localStorage.getItem('kanban_tasks_local');
+      const saved = localStorage.getItem(`kanban_tasks_${window.currentRoomId}`);
       if (saved) {
-        try {
-          tasks = JSON.parse(saved);
-        } catch (e) {
-          initDefaultTasks();
-          return;
-        }
+        tasks = JSON.parse(saved);
       } else {
         initDefaultTasks();
       }
@@ -1281,16 +1319,13 @@
       if (window.dbSaveTasks) {
         window.dbSaveTasks(tasks);
       } else {
-        localStorage.setItem('kanban_tasks_local', JSON.stringify(tasks));
+        localStorage.setItem(`kanban_tasks_${window.currentRoomId}`, JSON.stringify(tasks));
       }
     }
 
     function addTask() {
       const textInput = document.getElementById('taskInput');
       const memoInput = document.getElementById('memoInput');
-      const subject = document.getElementById('subjectSelect').value;
-      const type = document.getElementById('typeSelect').value;
-      const round = document.getElementById('roundSelect').value;
       const text = textInput.value.trim();
       const memo = memoInput.value.trim();
 
@@ -1301,9 +1336,9 @@
 
       tasks.push({
         id: Date.now().toString(),
-        subject: subject,
-        type: type,
-        round: round || '1',
+        subject: selectedFormValues.subject,
+        type: selectedFormValues.type,
+        round: selectedFormValues.round,
         text: text,
         memo: memo,
         status: 0
@@ -1315,10 +1350,61 @@
 
       textInput.value = '';
       memoInput.value = '';
-      document.getElementById('roundSelect').value = '1';
+      // 回数は初期値の「1」に戻す
+      setChoice('round', '1');
       textInput.focus();
     }
 
+    /* ----------------------------------------------------
+       カード拡大詳細モーダル
+    ---------------------------------------------------- */
+    function openCardDetail(id) {
+      const task = tasks.find(t => t.id === id);
+      if (!task) return;
+
+      const roundNum = task.round || '1';
+      const typeLabel = task.type || '宿題';
+      const container = document.getElementById('cardDetailContent');
+
+      container.innerHTML = `
+        <div class="detail-badge-row">
+          <span class="detail-tag tag-${task.subject}">${task.subject}</span>
+          <span class="detail-subtag sub-tag-${typeLabel}">${typeLabel}</span>
+          <span class="detail-round round-${roundNum}">${roundNum}</span>
+          <span style="font-size:0.8rem; color:var(--text-sub); margin-left:auto;">(${roundNum}回目)</span>
+        </div>
+
+        <div class="detail-card-text">
+          ${escapeHtml(task.text)}
+        </div>
+
+        ${task.memo ? `
+          <div class="detail-memo-box">
+            <strong>📝 メモ・目標:</strong><br>
+            ${escapeHtml(task.memo)}
+          </div>
+        ` : ''}
+
+        <div class="detail-status-row">
+          <span>現在の進捗状況:</span>
+          <strong>${STATUS_NAMES[task.status]}</strong>
+        </div>
+
+        <div class="detail-actions">
+          <div>
+            ${task.status > 0 ? `<button class="btn btn-primary" onclick="moveTask('${task.id}', -1); openCardDetail('${task.id}');">◀ 1つ戻す</button>` : ''}
+            ${task.status < 4 ? `<button class="btn btn-primary" onclick="moveTask('${task.id}', 1); openCardDetail('${task.id}');">進める ▶</button>` : ''}
+          </div>
+          <button class="btn btn-danger" onclick="closeModal('cardDetailModal'); requestSingleDelete('${task.id}')">🗑️ 削除</button>
+        </div>
+      `;
+
+      document.getElementById('cardDetailModal').classList.add('active');
+    }
+
+    /* ----------------------------------------------------
+       パスワード認証付き削除処理
+    ---------------------------------------------------- */
     function requestSingleDelete(id) {
       const task = tasks.find(t => t.id === id);
       const title = task ? `「${task.text}」` : 'このタスク';
@@ -1339,7 +1425,7 @@
 
     function requestBatchDelete() {
       if (selectedTaskIds.size === 0) {
-        showToast('削除するタスクにチェックを入れてください', true);
+        showToast('⚠️ 削除するタスクにチェックを入れてください');
         return;
       }
 
@@ -1376,11 +1462,14 @@
           pendingAction = null;
         }
       } else {
-        showToast('❌ パスワードが違います', true);
+        showToast('❌ パスワードが違います');
         document.getElementById('deletePasswordInput').value = '';
       }
     }
 
+    /* ----------------------------------------------------
+       選択削除モードのUI
+    ---------------------------------------------------- */
     function toggleSelectMode(forceState) {
       isSelectMode = forceState !== undefined ? forceState : !isSelectMode;
       const bar = document.getElementById('batchActionBar');
@@ -1414,8 +1503,7 @@
     }
 
     function updateSelectedCountDisplay() {
-      const el = document.getElementById('selectedCountText');
-      if (el) el.textContent = `${selectedTaskIds.size}件選択中`;
+      document.getElementById('selectedCountText').textContent = `${selectedTaskIds.size}件選択中`;
     }
 
     function moveTask(id, step) {
@@ -1431,6 +1519,7 @@
       }
     }
 
+    // ドラッグ＆ドロップ
     let draggedTaskId = null;
     function handleDragStart(e, id) {
       draggedTaskId = id;
@@ -1462,6 +1551,7 @@
       }
     }
 
+    // 画面描画
     function render() {
       for (let i = 0; i <= 4; i++) {
         const container = document.querySelector(`.lane[data-status="${i}"] .cards-container`);
@@ -1483,6 +1573,13 @@
         card.ondragstart = (e) => handleDragStart(e, task.id);
         card.ondragend = (e) => handleDragEnd(e);
 
+        // カードクリックで拡大表示（ボタン押下時は発火させない）
+        card.onclick = (e) => {
+          if (!e.target.closest('button') && !e.target.closest('input')) {
+            openCardDetail(task.id);
+          }
+        };
+
         const isChecked = selectedTaskIds.has(task.id);
         const roundNum = task.round || '1';
         const typeLabel = task.type || '宿題';
@@ -1497,13 +1594,13 @@
               <span class="sub-tag sub-tag-${typeLabel}">${typeLabel}</span>
               <span class="round-badge round-${roundNum}" title="${roundNum}回目">${roundNum}</span>
             </div>
-            <button class="btn-delete" title="削除（パスワードが必要）" onclick="requestSingleDelete('${task.id}')">✕</button>
+            <button class="btn-delete" title="削除（パスワードが必要）" onclick="event.stopPropagation(); requestSingleDelete('${task.id}')">✕</button>
           </div>
           <div class="card-text">${escapeHtml(task.text)}</div>
           ${task.memo ? `<div class="card-memo">📝 ${escapeHtml(task.memo)}</div>` : ''}
           <div class="card-actions">
-            ${task.status > 0 ? `<button class="btn-move" onclick="moveTask('${task.id}', -1)">◀ 戻す</button>` : ''}
-            ${task.status < 4 ? `<button class="btn-move" onclick="moveTask('${task.id}', 1)">進める ▶</button>` : ''}
+            ${task.status > 0 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', -1)">◀ 戻す</button>` : ''}
+            ${task.status < 4 ? `<button class="btn-move" onclick="event.stopPropagation(); moveTask('${task.id}', 1)">進める ▶</button>` : ''}
           </div>
         `;
         container.appendChild(card);
@@ -1524,169 +1621,18 @@
     }
 
     function escapeHtml(str) {
-      return String(str).replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-      );
+      return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
     }
 
-    async function executeAndSave() {
-      save();
-      render();
-
-      const fileName = "学習進捗_最新バックアップ.json";
-      const jsonContent = JSON.stringify(tasks, null, 2);
-      const gasUrl = localStorage.getItem(GAS_URL_KEY) || DEFAULT_GAS_URL;
-
-      if (gasUrl && gasUrl.startsWith('https://script.google.com/')) {
-        showToast('⏳ Googleドライブへ直接保存中...');
-        try {
-          await fetch(gasUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: jsonContent
-          });
-          showToast('🎉 Googleドライブへ直接上書き保存しました！');
-          return;
-        } catch (err) {
-          console.warn('GAS upload failed, fallback:', err);
-          showToast('⚠️ 直接保存に失敗したためファイル書き出しに切り替えます', true);
-        }
-      }
-
-      if (configuredFileHandle) {
-        try {
-          const writable = await configuredFileHandle.createWritable();
-          await writable.write(jsonContent);
-          await writable.close();
-          showToast('💾 Googleドライブの連携場所へ上書き保存しました！');
-          return;
-        } catch (err) {
-          console.warn('Configured handle failed, opening save dialog:', err);
-          configuredFileHandle = null;
-        }
-      }
-
-      if ('showSaveFilePicker' in window) {
-        try {
-          const handle = await window.showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{
-              description: 'JSON Backup File',
-              accept: { 'application/json': ['.json'] },
-            }],
-          });
-          configuredFileHandle = handle;
-          const writable = await handle.createWritable();
-          await writable.write(jsonContent);
-          await writable.close();
-          showToast('💾 Googleドライブの指定場所へ上書き保存しました！');
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-        }
-      }
-
-      const blob = new Blob([jsonContent], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.href = url;
-      downloadAnchor.download = fileName;
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      URL.revokeObjectURL(url);
-      showToast('💾 「学習進捗_最新バックアップ.json」を更新・保存しました');
-      const saveSuccess = document.getElementById('saveSuccessModal');
-      if (saveSuccess) saveSuccess.classList.add('active');
-    }
-
-    function toggleGasGuide() {
-      const box = document.getElementById('gasGuideBox');
-      if (!box) return;
-      box.style.display = box.style.display === 'none' ? 'block' : 'none';
-    }
-
-    function saveGasUrl() {
-      const input = document.getElementById('gasUrlInput');
-      if (!input) return;
-      const url = input.value.trim();
-      if (url) {
-        localStorage.setItem(GAS_URL_KEY, url);
-        showToast('⚡ 直接保存URLを設定しました！');
-      } else {
-        localStorage.removeItem(GAS_URL_KEY);
-        showToast('直接保存URLを解除しました');
-      }
-    }
-
-    function copyGasScript() {
-      const scriptCode = `function doPost(e) {
-  var folderId = "1gdGnRtLAZ-P40Ml0Steu7GwegS6w5q-x";
-  var folder = DriveApp.getFolderById(folderId);
-  var fileName = "学習進捗_最新バックアップ.json";
-  var content = e.postData.contents;
-  
-  var files = folder.getFilesByName(fileName);
-  if (files.hasNext()) {
-    var file = files.next();
-    file.setContent(content);
-  } else {
-    folder.createFile(fileName, content, MimeType.PLAIN_TEXT);
-  }
-  return ContentService.createTextOutput(JSON.stringify({status: "success"}))
-    .setMimeType(ContentService.MimeType.JSON);
-}`;
-      copyToClipboard(scriptCode);
-      showToast('📋 GASスクリプトをコピーしました！');
-    }
-
-    function copyGdriveFolderUrl() {
-      copyToClipboard(GDRIVE_FOLDER_URL);
-      showToast('📋 GoogleドライブのフォルダURLをコピーしました！');
-    }
-
-    function importDataFromFile(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const imported = JSON.parse(e.target.result);
-          if (Array.isArray(imported)) {
-            tasks = imported;
-            save();
-            render();
-            closeModal('settingsModal');
-            showToast('📂 バックアップからデータを復元しました');
-          } else {
-            showToast('❌ バックアップファイルの形式が正しくありません', true);
-          }
-        } catch (err) {
-          showToast('❌ ファイルの読み込みに失敗しました', true);
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = '';
-    }
-
+    /* ----------------------------------------------------
+       設定モーダル & 共有モーダル
+    ---------------------------------------------------- */
     function openSettingsModal() {
-      const currentPass = document.getElementById('currentPassInput');
-      const newPass = document.getElementById('newPassInput');
-      const confirmPass = document.getElementById('newPassConfirmInput');
-      const roomInput = document.getElementById('roomInput');
-      const displayElem = document.getElementById('currentRoomDisplay');
-      const modal = document.getElementById('settingsModal');
-
-      if (currentPass) currentPass.value = '';
-      if (newPass) newPass.value = '';
-      if (confirmPass) confirmPass.value = '';
-
-      const room = window.currentRoomId || 'tanaka-family';
-      if (displayElem) displayElem.textContent = room;
-      if (roomInput) roomInput.value = room;
-      if (modal) modal.classList.add('active');
+      document.getElementById('currentPassInput').value = '';
+      document.getElementById('newPassInput').value = '';
+      document.getElementById('newPassConfirmInput').value = '';
+      document.getElementById('roomInput').value = window.currentRoomId;
+      document.getElementById('settingsModal').classList.add('active');
     }
 
     function changePassword() {
@@ -1696,15 +1642,15 @@
       const actualPass = getAdminPassword();
 
       if (current !== actualPass) {
-        showToast('❌ 現在のパスワードが間違っています', true);
+        showToast('❌ 現在のパスワードが違います');
         return;
       }
       if (!next || next.length < 2) {
-        showToast('新しいパスワードを入力してください', true);
+        showToast('⚠️ 新しいパスワードを入力してください');
         return;
       }
       if (next !== confirm) {
-        showToast('❌ 新しいパスワードが一致しません', true);
+        showToast('❌ 新しいパスワードが一致しません');
         return;
       }
 
@@ -1718,118 +1664,45 @@
       if (newRoom && window.switchRoom) {
         window.switchRoom(newRoom);
         closeModal('settingsModal');
-      } else if (!newRoom) {
-        showToast('合言葉を入力してください', true);
       }
     }
 
     function openSyncModal() {
-      const modal = document.getElementById('syncModal');
-      if (modal) modal.classList.add('active');
+      const currentUrl = window.location.origin + window.location.pathname;
+      const shareUrl = `${currentUrl}#room=${encodeURIComponent(window.currentRoomId)}`;
 
-      const room = window.currentRoomId || 'tanaka-family';
-      const modalDisplay = document.getElementById('modalRoomIdDisplay');
-      if (modalDisplay) modalDisplay.textContent = room;
-
-      const isFileProtocol = window.location.protocol === 'file:';
-      const localWarning = document.getElementById('localFileWarning');
-      if (localWarning) {
-        localWarning.style.display = isFileProtocol ? 'block' : 'none';
-      }
-
-      let shareUrl = '';
-      if (!isFileProtocol) {
-        const currentUrl = window.location.origin + window.location.pathname;
-        shareUrl = `${currentUrl}#room=${encodeURIComponent(room)}`;
-      } else {
-        shareUrl = `https://study-kanban.app/#room=${encodeURIComponent(room)}`;
-      }
-      const shareUrlInput = document.getElementById('shareUrlInput');
-      if (shareUrlInput) {
-        shareUrlInput.value = isFileProtocol ? `合言葉: ${room}` : shareUrl;
-      }
+      document.getElementById('shareUrlInput').value = shareUrl;
 
       const qrContainer = document.getElementById('qrcode');
-      if (qrContainer) {
-        qrContainer.innerHTML = '';
-        let qrSuccess = false;
-        if (typeof QRCode !== 'undefined') {
-          try {
-            new QRCode(qrContainer, {
-              text: shareUrl,
-              width: 170,
-              height: 170,
-              colorDark: "#005fb2",
-              colorLight: "#ffffff",
-              correctLevel: QRCode.CorrectLevel.M
-            });
-            qrSuccess = true;
-          } catch (e) {
-            console.warn('QRCode library fallback:', e);
-          }
-        }
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: shareUrl,
+        width: 170,
+        height: 170,
+        colorDark: "#005fb2",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
 
-        if (!qrSuccess) {
-          const fallbackImg = document.createElement('img');
-          fallbackImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=170x170&data=${encodeURIComponent(shareUrl)}`;
-          fallbackImg.alt = 'QR Code';
-          fallbackImg.style.width = '170px';
-          fallbackImg.style.height = '170px';
-          fallbackImg.style.borderRadius = '8px';
-          fallbackImg.onerror = function() {
-            qrContainer.innerHTML = `
-              <div style="font-size:0.85rem; color:#64748b; text-align:center; padding:12px;">
-                📱 iPadでアプリを開き、合言葉<br>
-                <strong style="color:var(--primary); font-size:1.1rem;">${room}</strong><br>
-                を入力してください。
-              </div>
-            `;
-          };
-          qrContainer.appendChild(fallbackImg);
-        }
-      }
-    }
-
-    function copyRoomId() {
-      const room = window.currentRoomId || 'tanaka-family';
-      copyToClipboard(room);
-      showToast(`📋 合言葉「${room}」をコピーしました！`);
+      document.getElementById('syncModal').classList.add('active');
     }
 
     function closeModal(modalId) {
-      const el = document.getElementById(modalId);
-      if (el) el.classList.remove('active');
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.remove('active');
     }
 
-    function handleOverlayClick(event, modalId) {
-      if (event.target.id === modalId) {
+    function closeModalOnOverlay(event, modalId) {
+      if (event.target === document.getElementById(modalId)) {
         closeModal(modalId);
       }
     }
 
     function copyShareUrl() {
       const input = document.getElementById('shareUrlInput');
-      copyToClipboard(input.value);
-      showToast('📋 コピーしました！');
-    }
-
-    function copyToClipboard(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).catch(() => fallbackCopyText(text));
-      } else {
-        fallbackCopyText(text);
-      }
-    }
-
-    function fallbackCopyText(text) {
-      const tempInput = document.createElement('textarea');
-      tempInput.value = text;
-      tempInput.style.position = 'fixed';
-      tempInput.style.opacity = '0';
-      document.body.appendChild(tempInput);
-      tempInput.select();
+      input.select();
       document.execCommand('copy');
-      document.body.removeChild(tempInput);
+      showToast('📋 共有URLをコピーしました！');
     }
 
     function triggerPrint() {
@@ -1837,6 +1710,7 @@
       window.print();
     }
 
+    // 紙吹雪エフェクト
     function launchConfetti() {
       const canvas = document.getElementById('confetti-canvas');
       const ctx = canvas.getContext('2d');
